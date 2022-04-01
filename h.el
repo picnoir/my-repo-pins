@@ -5,7 +5,7 @@
 ;; Maintainer: Félix Baylac Jacqué <felix at alternativebit.fr>
 ;; Version: 1.14.0
 ;; Homepage: https://alternativebit.fr/TODO
-;; Package-Requires: ((emacs "24.1"))
+;; Package-Requires: ((emacs "25.1"))
 
 ;;; License:
 
@@ -28,7 +28,52 @@
 
 ;;; Code:
 
-(defvar h-test 1)
+(defgroup h-group nil
+  "Variables used to setup the h.el code folder manager."
+  :group 'Communication)
+
+
+(defcustom h-code-root nil
+  "Directory containing the git projects.
+h.el organise the git repos you'll checkout in a tree fashion.
+
+All the code fetched using h.el will end up in this root directory. A
+tree of subdirectories will be created mirroring the remote URI.
+
+For instance, after checking out
+https://git.savannah.gnu.org/git/emacs/org-mode.git, the source code
+will live in the h-code-root/git.savannah.gnu.org/git/emacs/org-mode/
+local directory"
+  :type 'directory
+  :group 'h-group)
+
+(defun h--is-git-repo (dir)
+  "Check if DIR is a git repo using a pretty weak heuristic."
+    (file-directory-p (concat (file-name-as-directory dir) ".git")))
+
+(defun h--get-code-root-projects (code-root)
+  "Retrieve the projects contained in the CODE-ROOT directory.
+We're going to make some hard assumptions about how the `h-code-root`
+directory should look like. First of all, if a directory seem to be a
+git repository, it'll automatically be considered as a project root.
+
+It means that after encountering a git repository, we won't recurse
+any further."
+   (let*
+       ((is-not-git-repo (lambda (dir) (not (h--is-git-repo dir))))
+        (remove-code-root-prefix
+        (lambda (path) (string-remove-prefix (concat code-root "/") path)))
+       ;;; PERF: Using directory-files-recursively is pretty
+       ;;; inneficient. We have to list the dir content twice:
+       ;;; 1. when directory-files-recursively checks.
+       ;;; 2. when we filter the intermediate dirs from this list.
+       (recursively-found-dirs
+        (directory-files-recursively code-root "" t is-not-git-repo))
+       (projects-absolute-path (seq-filter (lambda (e) (h--is-git-repo e)) recursively-found-dirs))
+       (projects-relative-to-code-root
+        (mapcar remove-code-root-prefix projects-absolute-path)))
+
+    projects-relative-to-code-root))
 
 (provide 'h)
 ;;; h.el ends here

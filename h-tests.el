@@ -29,9 +29,33 @@
 (require 'ert)
 (require 'h)
 
-(ert-deftest h-dummy-test ()
-  "Testing the project setup."
-  (should (eq h-test 1)))
+; For reference: test-root-1 looks like this
+; test-root-1
+; ├── example1.tld
+; │   ├── user1
+; │   │   ├── proj1
+; │   │   └── proj2
+; │   └── user2
+; │       └── proj1
+; └── example2.tld
+;     └── user1
+;         └── proj1
+(ert-deftest h-get-code-root-projects-test ()
+  "Testing the `h--get-code-root-projects with test-root-1 setup."
+  (let
+      (
+       (results (h--get-code-root-projects "./test/fixtures/test-root-1")))
+    (should (member "example1.tld/user1/proj1" results))
+    (should (member "example1.tld/user1/proj2" results))
+    (should (member "example1.tld/user2/proj1" results))
+    (should (member "example2.tld/user1/proj1" results))
+    (should (eq (length results) 4))
+  ))
+
+(h--get-code-root-projects "./test/fixtures/test-root-1")
+
+
+
 
 (provide 'h-tests)
 ;;; h-tests.el ends here
