@@ -47,6 +47,28 @@ local directory"
   :type 'directory
   :group 'h-group)
 
+(defcustom h-git-bin "git"
+  "Path pointing to the git binary.
+By default, it'll look for git in the current $PATH."
+  :type 'file
+  :group 'h-group)
+
+(defun h--git-path ()
+  "Find the git binary path using `h-git-bin`.
+
+Errors out if we can't find it."
+  (if (file-executable-p h-git-bin)
+      h-git-bin
+    (let ((git-from-bin-path (locate-file h-git-bin exec-path)))
+      (if (file-executable-p git-from-bin-path)
+          git-from-bin-path
+          (error "Can't find git. Is h-git-bin correctly set?")))))
+
+(defun h--call-git-in-dir (dir args)
+  "Call the git binary as pointed by `h-git-bin` in DIR with ARGS."
+  (let ((default-directory dir))
+    (process-file (h--git-path) nil nil nil args)))
+
 (defun h--is-git-repo (dir)
   "Check if DIR is a git repo using a pretty weak heuristic."
     (file-directory-p (concat (file-name-as-directory dir) ".git")))
@@ -62,7 +84,7 @@ any further."
    (let*
        ((is-not-git-repo (lambda (dir) (not (h--is-git-repo dir))))
         (remove-code-root-prefix
-        (lambda (path) (string-remove-prefix (concat code-root "/") path)))
+        (lambda (path) (string-remove-prefix (concat (file-name-as-directory code-root)) path)))
        ;;; PERF: Using directory-files-recursively is pretty
        ;;; inneficient. We have to list the dir content twice:
        ;;; 1. when directory-files-recursively checks.
