@@ -32,4 +32,4 @@ compile: clean-elc
 clean-elc:
 	rm -f f.elc
 
-.PHONY:	all compile clean-elc package-lint
+.PHONY:	all compile clean-elc package-lint test

@@ -80,22 +80,26 @@ directory should look like. First of all, if a directory seem to be a
 git repository, it'll automatically be considered as a project root.
 
 It means that after encountering a git repository, we won't recurse
-any further."
-   (let*
-       ((is-not-git-repo (lambda (dir) (not (h--is-git-repo dir))))
-        (remove-code-root-prefix
-        (lambda (path) (string-remove-prefix (concat (file-name-as-directory code-root)) path)))
-       ;;; PERF: Using directory-files-recursively is pretty
-       ;;; inneficient. We have to list the dir content twice:
-       ;;; 1. when directory-files-recursively checks.
-       ;;; 2. when we filter the intermediate dirs from this list.
-       (recursively-found-dirs
-        (directory-files-recursively code-root "" t is-not-git-repo))
-       (projects-absolute-path (seq-filter (lambda (e) (h--is-git-repo e)) recursively-found-dirs))
-       (projects-relative-to-code-root
-        (mapcar remove-code-root-prefix projects-absolute-path)))
+any further.
 
-    projects-relative-to-code-root))
+If the directory pointed by h-code-root does not exists yet, returns
+an empty list."
+  (if (not (file-directory-p code-root))
+      '()
+    (let*
+        ((is-not-git-repo (lambda (dir) (not (h--is-git-repo dir))))
+         (remove-code-root-prefix
+          (lambda (path) (string-remove-prefix (concat (file-name-as-directory code-root)) path)))
+       ;;; PERF: Using directory-files-recursively is pretty
+         ;;; inneficient. We have to list the dir content twice:
+         ;;; 1. when directory-files-recursively checks.
+         ;;; 2. when we filter the intermediate dirs from this list.
+         (recursively-found-dirs
+          (directory-files-recursively code-root "" t is-not-git-repo))
+         (projects-absolute-path (seq-filter (lambda (e) (h--is-git-repo e)) recursively-found-dirs))
+         (projects-relative-to-code-root
+          (mapcar remove-code-root-prefix projects-absolute-path)))
+      projects-relative-to-code-root)))
 
 (provide 'h)
 ;;; h.el ends here

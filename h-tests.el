@@ -80,11 +80,49 @@ For reference: test-root-1 looks like this:
        (funcall func temp-dir)
        ))))
 
+(defun h--tests-run-on-testroot-2 (func)
+  "Run the FUNC function on testroot2.
+
+FUNC is called with the directory cotaining test root 2 as parameter.
+
+For reference: test-root-2 looks like this:
+    test-root-2
+    ├── example1.tld
+    │   ├── user1
+    │   │   ├── proj1
+    │   │   └── proj2 (NOT A GIT REPO)
+    │   └── user2
+    │       └── proj1
+    └── example2.tld
+        └── user1
+            └── proj1"
+  (h--tests-with-temp-dir
+   (lambda (temp-dir)
+     (progn
+       (h--tests-init-fake-git-repo (concat temp-dir "/example1.tld/user1/proj1"))
+       (make-directory (concat (file-name-as-directory temp-dir) "/example1.tld/user1/proj2"))
+       (h--tests-init-fake-git-repo (concat temp-dir "/example1.tld/user2/proj1"))
+       (h--tests-init-fake-git-repo (concat temp-dir "/example2.tld/user1/proj1"))
+       (funcall func temp-dir)))))
+
+
+(defun h--tests-run-on-empty-testroot (func)
+  "Run the FUNC function on testroot1.
+
+FUNC is called with a empty test root.
+
+For reference: a empty test root looks like this:
+    test-root"
+  (h--tests-with-temp-dir
+   (lambda (temp-dir)
+     (progn
+       (funcall func temp-dir)))))
+
 ; Tests
 ;;;;;;;
 
-(ert-deftest h--tests-get-code-root-projects ()
-  "Testing the `h--get-code-root-projects with test-root-1 setup."
+(ert-deftest h--tests-get-code-root-projects-coderoot-1 ()
+  "Test the `h--get-code-root-projects with test-root-1 setup."
   (let
       ((results
         (h--tests-run-on-testroot-1 (lambda (root) (h--get-code-root-projects root))))
@@ -93,14 +131,32 @@ For reference: test-root-1 looks like this:
     (should (member "example1.tld/user1/proj2" results))
     (should (member "example1.tld/user2/proj1" results))
     (should (member "example2.tld/user1/proj1" results))
-    (should (eq (length results) 4))
-  ))
+    (should (eq (length results) 4))))
 
-(h--get-code-root-projects "./test/fixtures/test-root-1")
+(ert-deftest h--tests-get-code-root-projects-coderoot-2 ()
+  "Test the `h--get-code-root-projects with test-root-2 setup."
+  (let
+      ((results
+        (h--tests-run-on-testroot-2 (lambda (root) (h--get-code-root-projects root))))
+       )
+    (should (member "example1.tld/user1/proj1" results))
+    (should (member "example1.tld/user2/proj1" results))
+    (should (member "example2.tld/user1/proj1" results))
+    (should (eq (length results) 3))))
 
-(file-name-as-directory "~/code-root")
+(ert-deftest h--tests-get-code-root-projects-empty-coderoot ()
+  "Test the `h--get-code-root-projects with a empty coderoot."
+  (let
+      ((results
+        (h--tests-run-on-empty-testroot (lambda (root) (h--get-code-root-projects root))))
+       )
+    (should (seq-empty-p results))))
 
-
+(ert-deftest h--tests-get-code-root-projects-no-coderoot ()
+  "Test the `h--get-code-root-projects with a non-existing coderoot."
+  (let
+      ((results (h--get-code-root-projects "/does/not/exist")))
+    (should (seq-empty-p results))))
 
 (provide 'h-tests)
 ;;; h-tests.el ends here
