@@ -28,6 +28,8 @@
 
 ;;; Code:
 
+(eval-when-compile (require 'subr-x))
+
 (defgroup h-group nil
   "Variables used to setup the h.el code folder manager."
   :group 'Communication)
