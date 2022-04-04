@@ -36,7 +36,7 @@
 
 
 (defcustom h-code-root nil
-  "Directory containing the git projects.
+  "Root directory containing all your projects.
 h.el organise the git repos you'll checkout in a tree fashion.
 
 All the code fetched using h.el will end up in this root directory. A
@@ -48,6 +48,13 @@ will live in the h-code-root/git.savannah.gnu.org/git/emacs/org-mode/
 local directory"
   :type 'directory
   :group 'h-group)
+
+(defun h--safe-get-code-root ()
+    "Ensure ‘h-code-root’ is correctly set, then canonalize the path.
+Errors out if ‘h-code-root’ has not been set yet."
+    (progn (when (not h-code-root)
+             (error "h-code-root has not been set. Please point it to your code root"))
+           (file-name-as-directory h-code-root)))
 
 (defcustom h-git-bin "git"
   "Path pointing to the git binary.
@@ -102,6 +109,20 @@ an empty list."
          (projects-relative-to-code-root
           (mapcar remove-code-root-prefix projects-absolute-path)))
       projects-relative-to-code-root)))
+
+(defun h-jump-to-project ()
+  "Open a project contained in the ‘h-code-root’ directory.
+If the project is not here yet, check it out from the available sources."
+  (interactive)
+  (let* ((selected-project-from-coderoot
+          (completing-read
+           "Available projects: "
+           (h--get-code-root-projects (h--safe-get-code-root))
+           nil t ""))
+         (selected-project-absolute-path (concat (h--safe-get-code-root) selected-project-from-coderoot)))
+    (if (file-directory-p selected-project-absolute-path)
+        (find-file selected-project-absolute-path)
+      (error "NOT IMPLEMENTED: cannot checkout a new project for now"))))
 
 (provide 'h)
 ;;; h.el ends here
