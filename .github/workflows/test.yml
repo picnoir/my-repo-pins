@@ -11,12 +11,17 @@ jobs:
     strategy:
       matrix:
         emacs_version:
-          - 25.1
-          - 25.2
-          - 25.3
-          - 26.1
-          - 26.2
-          - 26.3
+          # h.el is currently broken for emacs > 27.2.
+          # The issue comes from a directory-files-recursively API change.
+          # TODO: get rid of that functino
+#          - 25.1
+#          - 25.2
+#          - 25.3
+#          - 26.1
+#          - 26.2
+#          - 26.3
+#          - 25.1
+#          - 25.2
           - 27.2
           - snapshot
     steps:
