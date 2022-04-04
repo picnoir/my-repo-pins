@@ -1,30 +1,30 @@
 ;;; h.el --- Project navigation and remote checkout -*- lexical-binding: t -*-
 
-;; Copyright (C) 2022 Félix Baylac Jacqué
-;; Author: Félix Baylac Jacqué <felix at alternativebit.fr>
-;; Maintainer: Félix Baylac Jacqué <felix at alternativebit.fr>
-;; Version: 1.14.0
-;; Homepage: https://alternativebit.fr/TODO
-;; Package-Requires: ((emacs "25.1"))
+;;; Copyright (C) 2022 Félix Baylac Jacqué
+;;; Author: Félix Baylac Jacqué <felix at alternativebit.fr>
+;;; Maintainer: Félix Baylac Jacqué <felix at alternativebit.fr>
+;;; Version: 1.14.0
+;;; Homepage: https://alternativebit.fr/TODO
+;;; Package-Requires: ((emacs "25.1"))
 
 ;;; License:
 
-;; This program is free software; you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation, either version 3 of the License, or
-;; (at your option) any later version.
+;;; This program is free software; you can redistribute it and/or modify
+;;; it under the terms of the GNU General Public License as published by
+;;; the Free Software Foundation, either version 3 of the License, or
+;;; (at your option) any later version.
 
-;; This program is distributed in the hope that it will be useful,
-;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;; GNU General Public License for more details.
+;;; This program is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;;; GNU General Public License for more details.
 
-;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <https://www.gnu.org/licenses/>
+;;; You should have received a copy of the GNU General Public License
+;;; along with this program.  If not, see <https://www.gnu.org/licenses/>
 
-;;; Commentary:
+;;;; Commentary:
 
-;; TODO before publish
+;;; TODO before publish
 
 ;;; Code:
 
@@ -56,7 +56,7 @@ By default, it'll look for git in the current $PATH."
   :group 'h-group)
 
 (defun h--git-path ()
-  "Find the git binary path using `h-git-bin`.
+  "Find the git binary path using ‘h-git-bin’.
 
 Errors out if we can't find it."
   (if (file-executable-p h-git-bin)
@@ -67,7 +67,7 @@ Errors out if we can't find it."
           (error "Can't find git. Is h-git-bin correctly set?")))))
 
 (defun h--call-git-in-dir (dir args)
-  "Call the git binary as pointed by `h-git-bin` in DIR with ARGS."
+  "Call the git binary as pointed by ‘h-git-bin’ in DIR with ARGS."
   (let ((default-directory dir))
     (process-file (h--git-path) nil nil nil args)))
 
@@ -77,7 +77,7 @@ Errors out if we can't find it."
 
 (defun h--get-code-root-projects (code-root)
   "Retrieve the projects contained in the CODE-ROOT directory.
-We're going to make some hard assumptions about how the `h-code-root`
+We're going to make some hard assumptions about how the ‘h-code-root’
 directory should look like. First of all, if a directory seem to be a
 git repository, it'll automatically be considered as a project root.
 
@@ -92,10 +92,10 @@ an empty list."
         ((is-not-git-repo (lambda (dir) (not (h--is-git-repo dir))))
          (remove-code-root-prefix
           (lambda (path) (string-remove-prefix (concat (file-name-as-directory code-root)) path)))
-       ;;; PERF: Using directory-files-recursively is pretty
-         ;;; inneficient. We have to list the dir content twice:
-         ;;; 1. when directory-files-recursively checks.
-         ;;; 2. when we filter the intermediate dirs from this list.
+         ;; PERF: Using directory-files-recursively is pretty
+         ;; inneficient. We have to list the dir content twice:
+         ;; 1. when directory-files-recursively checks.
+         ;; 2. when we filter the intermediate dirs from this list.
          (recursively-found-dirs
           (directory-files-recursively code-root "" t is-not-git-repo))
          (projects-absolute-path (seq-filter (lambda (e) (h--is-git-repo e)) recursively-found-dirs))

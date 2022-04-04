@@ -1,35 +1,35 @@
 ;;; h-tests.el --- Project navigation and remote checkout -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2022 Félix Baylac Jacqué
-;; Author: Félix Baylac Jacqué <felix at alternativebit.fr>
-;; Maintainer: Félix Baylac Jacqué <felix at alternativebit.fr>
-;; Version: 1.14.0
+;;; Copyright (C) 2022 Félix Baylac Jacqué
+;;; Author: Félix Baylac Jacqué <felix at alternativebit.fr>
+;;; Maintainer: Félix Baylac Jacqué <felix at alternativebit.fr>
+;;; Version: 1.14.0
 
 ;;; License:
 
-;; This program is free software; you can redistribute it and/or modify
-;; it under the terms of the GNU General Public License as published by
-;; the Free Software Foundation, either version 3 of the License, or
-;; (at your option) any later version.
+;;; This program is free software; you can redistribute it and/or modify
+;;; it under the terms of the GNU General Public License as published by
+;;; the Free Software Foundation, either version 3 of the License, or
+;;; (at your option) any later version.
 
-;; This program is distributed in the hope that it will be useful,
-;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;; GNU General Public License for more details.
+;;; This program is distributed in the hope that it will be useful,
+;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;;; GNU General Public License for more details.
 
-;; You should have received a copy of the GNU General Public License
-;; along with this program.  If not, see <https://www.gnu.org/licenses/>
+;;; You should have received a copy of the GNU General Public License
+;;; along with this program.  If not, see <https://www.gnu.org/licenses/>
 
 ;;; Commentary:
 
-;; TODO before publish
+;;; TODO before publish
 
 ;;; Code:
 
 (require 'ert)
 (require 'h)
 
-; Test Helpers
+;; Test Helpers
 ;;;;;;;;;;;;;;
 
 (defun h--tests-with-temp-dir (func)
@@ -51,7 +51,7 @@ If DIR doesn't exists, we create it first."
        (unless (file-directory-p d) (make-directory d t))
        (h--call-git-in-dir d "init" ))))
 
-; Test Dirs Setup
+;; Test Dirs Setup
 ;;;;;;;;;;;;;;;;;
 
 (defun h--tests-run-on-testroot-1 (func)
@@ -118,7 +118,7 @@ For reference: a empty test root looks like this:
      (progn
        (funcall func temp-dir)))))
 
-; Tests
+;; Tests
 ;;;;;;;
 
 (ert-deftest h--tests-get-code-root-projects-coderoot-1 ()
