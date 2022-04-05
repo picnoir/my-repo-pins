@@ -28,10 +28,12 @@
 
 ;;; Code:
 
+;; Required to batch eval the module: the substring functions are
+;; loaded by default in interactive emacs, not in batch-mode emacs.
 (eval-when-compile (require 'subr-x))
 
 (defgroup h-group nil
-  "Variables used to setup the h.el code folder manager."
+  "Variables used to setup the h.el project manager."
   :group 'Communication)
 
 
