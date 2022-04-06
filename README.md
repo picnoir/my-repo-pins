@@ -5,7 +5,7 @@ Project checkout and navigation Emacs package heavily inspired by [zimbatm/h](ht
 
 TODO before first release:
 
-- [ ] Replace `directory-files-recursively` with custom implemention. Support 'till Emacs 24.
+- [x] Replace `directory-files-recursively` with custom implemention. Support 'till Emacs 24.
 - [ ] Implement GitHub fetcher.
 - [ ] Implement GitLab fetcher.
 - [ ] Implement sr.ht fetcher.

@@ -80,10 +80,6 @@ Errors out if we can't find it."
   (let ((default-directory dir))
     (process-file (h--git-path) nil nil nil args)))
 
-(defun h--is-git-repo (dir)
-  "Check if DIR is a git repo using a pretty weak heuristic."
-    (file-directory-p (concat (file-name-as-directory dir) ".git")))
-
 (defun h--find-git-dirs-recursively (dir)
   "Vendored, slightly modified version of ‘directory-files-recursively’.
 
@@ -135,18 +131,13 @@ an empty list."
   (if (not (file-directory-p code-root))
       '()
     (let*
-        ((is-not-git-repo (lambda (dir) (not (h--is-git-repo dir))))
-         (remove-code-root-prefix
-          (lambda (path) (string-remove-prefix (concat (file-name-as-directory code-root)) path)))
-         ;; PERF: Using directory-files-recursively is pretty
-         ;; inneficient. We have to list the dir content twice:
-         ;; 1. when directory-files-recursively checks.
-         ;; 2. when we filter the intermediate dirs from this list.
-         (recursively-found-dirs
-          (directory-files-recursively code-root "" t is-not-git-repo))
-         (projects-absolute-path (seq-filter (lambda (e) (h--is-git-repo e)) recursively-found-dirs))
+        ((remove-code-root-prefix-and-trailing-slash
+          (lambda (path)
+            (let ((path-without-prefix (string-remove-prefix code-root path)))
+                (substring path-without-prefix 0 (1- (length path-without-prefix))))))
+         (projects-absolute-path (h--find-git-dirs-recursively code-root))
          (projects-relative-to-code-root
-          (mapcar remove-code-root-prefix projects-absolute-path)))
+          (mapcar remove-code-root-prefix-and-trailing-slash projects-absolute-path)))
       projects-relative-to-code-root)))
 
 (defun h-jump-to-project ()
