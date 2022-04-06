@@ -133,6 +133,22 @@ For reference: a empty test root looks like this:
     (should (member "example2.tld/user1/proj1" results))
     (should (eq (length results) 4))))
 
+
+(ert-deftest h--tests-find-git-dirs-recursively-coderoot-1 ()
+  "Test the `h--get-code-root-projects with test-root-1 setup."
+  (let*
+      ((r nil)
+       (results
+        (h--tests-run-on-testroot-1
+         (lambda (root)
+           (progn (setq r root)
+                  (h--find-git-dirs-recursively root))))))
+    (should (member (concat r "example1.tld/user1/proj1/") results))
+    (should (member (concat r "example1.tld/user1/proj2/") results))
+    (should (member (concat r "example1.tld/user2/proj1/") results))
+    (should (member (concat r "example2.tld/user1/proj1/") results))
+    (should (eq (length results) 4))))
+
 (ert-deftest h--tests-get-code-root-projects-coderoot-2 ()
   "Test the `h--get-code-root-projects with test-root-2 setup."
   (let
@@ -144,11 +160,33 @@ For reference: a empty test root looks like this:
     (should (member "example2.tld/user1/proj1" results))
     (should (eq (length results) 3))))
 
+(ert-deftest h--tests-find-git-dirs-recursively-coderoot-2 ()
+  "Test the `h--get-code-root-projects with test-root-2 setup."
+  (let*
+      ((r nil)
+       (results
+        (h--tests-run-on-testroot-2
+         (lambda (root)
+           (progn (setq r root)
+                  (h--find-git-dirs-recursively root))))))
+    (should (member (concat r "example1.tld/user1/proj1/") results))
+    (should (member (concat r "example1.tld/user2/proj1/") results))
+    (should (member (concat r "example2.tld/user1/proj1/") results))
+    (should (eq (length results) 3))))
+
 (ert-deftest h--tests-get-code-root-projects-empty-coderoot ()
   "Test the `h--get-code-root-projects with a empty coderoot."
   (let
       ((results
         (h--tests-run-on-empty-testroot (lambda (root) (h--get-code-root-projects root))))
+       )
+    (should (seq-empty-p results))))
+
+(ert-deftest h--tests-find-git-dirs-recursively-empty-coderoot ()
+  "Test the `h--get-code-root-projects with a empty coderoot."
+  (let
+      ((results
+        (h--tests-run-on-empty-testroot (lambda (root) (h--find-git-dirs-recursively root))))
        )
     (should (seq-empty-p results))))
 

@@ -84,6 +84,43 @@ Errors out if we can't find it."
   "Check if DIR is a git repo using a pretty weak heuristic."
     (file-directory-p (concat (file-name-as-directory dir) ".git")))
 
+(defun h--find-git-dirs-recursively (dir)
+  "Vendored, slightly modified version of ‘directory-files-recursively’.
+
+This library isn't available for Emacs > 25.1. Vendoring it for
+backward compatibility.
+
+We take advantage of vendoring this function to taylor it a bit more
+for our needs.
+
+Return list of all git repositories under directory DIR. This function works
+recursively. Files are returned in \"depth first\" order, and files
+from each directory are sorted in alphabetical order. Each file name
+appears in the returned list in its absolute form.
+
+By default, the returned list excludes directories, but if
+optional argument INCLUDE-DIRECTORIES is non-nil, they are
+included."
+  (let* ((projects nil)
+         (recur-result nil)
+         (dir (directory-file-name dir)))
+    (dolist (file (sort (file-name-all-completions "" dir)
+			'string<))
+      (unless (member file '("./" "../"))
+	(if (directory-name-p file)
+	      ;; Don't follow symlinks to other directories.
+            (let ((full-file (concat dir "/" file)))
+	      (when (not (file-symlink-p full-file))
+                (if (file-directory-p (concat full-file ".git"))
+                    ;; It's a git repo, let's stop here.
+                    (progn (setq projects (nconc projects (list full-file))))
+                  ;; It's not a git repo, let's recurse into it.
+                  (setq recur-result
+                        (nconc recur-result
+                               (h--find-git-dirs-recursively full-file)))))))))
+   (nconc recur-result (nreverse projects))))
+
+
 (defun h--get-code-root-projects (code-root)
   "Retrieve the projects contained in the CODE-ROOT directory.
 We're going to make some hard assumptions about how the ‘h-code-root’
