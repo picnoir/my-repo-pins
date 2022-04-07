@@ -28,6 +28,7 @@
 
 ;;; Code:
 
+(require 'json)
 ;; Required to batch eval the module: the substring functions are
 ;; loaded by default in interactive emacs, not in batch-mode emacs.
 (eval-when-compile (require 'subr-x))
@@ -76,9 +77,9 @@ Errors out if we can't find it."
 Parsing a response from a GET https://api.github.com/repos/user/repo request."
   (progn (set-buffer response-buffer)
          (goto-char 0)
-         (let* ((parsed-buffer (json-parse-buffer))
-                (ssh-url (gethash "ssh_url" parsed-buffer))
-                (https-url (gethash "clone_url" parsed-buffer)))
+         (let* ((parsed-buffer (json-read))
+                (ssh-url (cdr(assoc 'ssh_url parsed-buffer)))
+                (https-url (cdr(assoc 'clone_url parsed-buffer))))
            `((ssh . ,ssh-url) (https . ,https-url)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
