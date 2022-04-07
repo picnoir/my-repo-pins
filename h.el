@@ -74,7 +74,12 @@ Errors out if we can't find it."
   "Parse the RESPONSE-BUFFER containing a GET response from the GitHub API.
 
 Parsing a response from a GET https://api.github.com/repos/user/repo request."
-  response-buffer)
+  (progn (set-buffer response-buffer)
+         (goto-char 0)
+         (let* ((parsed-buffer (json-parse-buffer))
+                (ssh-url (gethash "ssh_url" parsed-buffer))
+                (https-url (gethash "clone_url" parsed-buffer)))
+           `((ssh . ,ssh-url) (https . ,https-url)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Internal: code-root management functions

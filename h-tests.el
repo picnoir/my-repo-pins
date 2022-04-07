@@ -196,5 +196,19 @@ For reference: a empty test root looks like this:
       ((results (h--get-code-root-projects "/does/not/exist")))
     (should (seq-empty-p results))))
 
+
+;; Test Fetchers
+;;;;;;;;;;;;;;;;;
+
+;; Github
+
+(ert-deftest h--tests-fetch-github-parse-response ()
+  "Test h--tests-fetch-github-parse-response with a fixture."
+    (with-temp-buffer
+      (insert-file-contents "./tests/fixtures/github-repo-query-response.json")
+      (should (equal (h--fetch-github-parse-response (current-buffer))
+                  '((ssh . "git@github.com:NinjaTrappeur/h.el.git")
+                    (https . "https://github.com/NinjaTrappeur/h.el.git"))))))
+
 (provide 'h-tests)
 ;;; h-tests.el ends here
