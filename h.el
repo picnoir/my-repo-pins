@@ -36,27 +36,9 @@
   "Variables used to setup the h.el project manager."
   :group 'Communication)
 
-
-(defcustom h-code-root nil
-  "Root directory containing all your projects.
-h.el organise the git repos you'll checkout in a tree fashion.
-
-All the code fetched using h.el will end up in this root directory. A
-tree of subdirectories will be created mirroring the remote URI.
-
-For instance, after checking out
-https://git.savannah.gnu.org/git/emacs/org-mode.git, the source code
-will live in the h-code-root/git.savannah.gnu.org/git/emacs/org-mode/
-local directory"
-  :type 'directory
-  :group 'h-group)
-
-(defun h--safe-get-code-root ()
-    "Ensure ‘h-code-root’ is correctly set, then canonalize the path.
-Errors out if ‘h-code-root’ has not been set yet."
-    (progn (when (not h-code-root)
-             (error "h-code-root has not been set. Please point it to your code root"))
-           (file-name-as-directory h-code-root)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Internal: git primitives
+;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defcustom h-git-bin "git"
   "Path pointing to the git binary.
@@ -79,6 +61,46 @@ Errors out if we can't find it."
   "Call the git binary as pointed by ‘h-git-bin’ in DIR with ARGS."
   (let ((default-directory dir))
     (process-file (h--git-path) nil nil nil args)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Internal: builtin fetchers
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Generic fetcher infrastructure
+
+;;; Github Fetcher
+
+(defun h--fetch-github-parse-response (response-buffer)
+  "Parse the RESPONSE-BUFFER containing a GET response from the GitHub API.
+
+Parsing a response from a GET https://api.github.com/repos/user/repo request."
+  response-buffer)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Internal: code-root management functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defcustom h-code-root nil
+  "Root directory containing all your projects.
+h.el organise the git repos you'll checkout in a tree fashion.
+
+All the code fetched using h.el will end up in this root directory. A
+tree of subdirectories will be created mirroring the remote URI.
+
+For instance, after checking out
+https://git.savannah.gnu.org/git/emacs/org-mode.git, the source code
+will live in the h-code-root/git.savannah.gnu.org/git/emacs/org-mode/
+local directory"
+  :type 'directory
+  :group 'h-group)
+
+(defun h--safe-get-code-root ()
+    "Ensure ‘h-code-root’ is correctly set, then canonalize the path.
+Errors out if ‘h-code-root’ has not been set yet."
+    (progn (when (not h-code-root)
+             (error "h-code-root has not been set. Please point it to your code root"))
+           (file-name-as-directory h-code-root)))
+
 
 (defun h--find-git-dirs-recursively (dir)
   "Vendored, slightly modified version of ‘directory-files-recursively’.
@@ -139,6 +161,10 @@ an empty list."
          (projects-relative-to-code-root
           (mapcar remove-code-root-prefix-and-trailing-slash projects-absolute-path)))
       projects-relative-to-code-root)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;
+;; Interactive Commands
+;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun h-jump-to-project ()
   "Open a project contained in the ‘h-code-root’ directory.
