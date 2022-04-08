@@ -29,6 +29,7 @@
 ;;; Code:
 
 (require 'json)
+(require 'url)
 ;; Required to batch eval the module: the substring functions are
 ;; loaded by default in interactive emacs, not in batch-mode emacs.
 (eval-when-compile (require 'subr-x))
@@ -69,18 +70,42 @@ Errors out if we can't find it."
 
 ;;; Generic fetcher infrastructure
 
+(defcustom h-forge-fetchers
+  '((github . h--query-github))
+  "List of forges for which we want to remote fetch projects."
+  :type '(alist :key-type 'symbol :value-type 'function)
+  :group 'h-group)
+
 ;;; Github Fetcher
+
 
 (defun h--fetch-github-parse-response (response-buffer)
   "Parse the RESPONSE-BUFFER containing a GET response from the GitHub API.
 
 Parsing a response from a GET https://api.github.com/repos/user/repo request."
   (progn (set-buffer response-buffer)
-         (goto-char 0)
-         (let* ((parsed-buffer (json-read))
-                (ssh-url (cdr(assoc 'ssh_url parsed-buffer)))
-                (https-url (cdr(assoc 'clone_url parsed-buffer))))
-           `((ssh . ,ssh-url) (https . ,https-url)))))
+         (goto-char (point-min))
+         (if (not(eq(re-search-forward "^HTTP/1.1 200 OK$" nil t) nil))
+             (progn
+               (goto-char (point-min))
+               (re-search-forward "^$")
+               (delete-region (point) (point-min))
+               (let* ((parsed-buffer (json-read))
+                      (ssh-url (cdr(assoc 'ssh_url parsed-buffer)))
+                      (https-url (cdr(assoc 'clone_url parsed-buffer))))
+                 `((ssh . ,ssh-url) (https . ,https-url))))
+           nil)))
+
+(defun h--query-github (user-name repo-name)
+  "Hello world REPO-NAME USER-NAME."
+  (with-current-buffer
+      (url-retrieve (format "https://api.github.com/repos/%s/%s" user-name repo-name)
+                    (lambda (page)
+                      (let ((response-str (buffer-string)))
+                        (progn
+                          (switch-to-buffer (get-buffer-create "github"))
+                          (goto-char (point-max))
+                          (insert response-str)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Internal: code-root management functions

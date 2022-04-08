@@ -202,13 +202,19 @@ For reference: a empty test root looks like this:
 
 ;; Github
 
-(ert-deftest h--tests-fetch-github-parse-response ()
+(ert-deftest h--tests-fetch-github-parse-response-ok ()
   "Test h--tests-fetch-github-parse-response with a fixture."
     (with-temp-buffer
-      (insert-file-contents "./tests/fixtures/github-repo-query-response.json")
+      (insert-file-contents "./tests/fixtures/github-get-request-ok.txt")
       (should (equal (h--fetch-github-parse-response (current-buffer))
                   '((ssh . "git@github.com:NinjaTrappeur/h.el.git")
                     (https . "https://github.com/NinjaTrappeur/h.el.git"))))))
+
+(ert-deftest h--tests-fetch-github-parse-response-ko ()
+  "Test h--tests-fetch-github-parse-response with a fixture."
+    (with-temp-buffer
+      (insert-file-contents "./tests/fixtures/github-get-request-ko.txt")
+      (should (equal (h--fetch-github-parse-response (current-buffer)) nil))))
 
 (provide 'h-tests)
 ;;; h-tests.el ends here
