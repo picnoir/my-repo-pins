@@ -96,16 +96,17 @@ Parsing a response from a GET https://api.github.com/repos/user/repo request."
                  `((ssh . ,ssh-url) (https . ,https-url))))
            nil)))
 
-(defun h--query-github (user-name repo-name)
-  "Hello world REPO-NAME USER-NAME."
-  (with-current-buffer
-      (url-retrieve (format "https://api.github.com/repos/%s/%s" user-name repo-name)
-                    (lambda (page)
-                      (let ((response-str (buffer-string)))
-                        (progn
-                          (switch-to-buffer (get-buffer-create "github"))
-                          (goto-char (point-max))
-                          (insert response-str)))))))
+(defun h--query-github (user-name repo-name callback)
+  "Queries the GitHub API to retrieve some infos about a GitHub repo.
+This function will first try to determine whether
+github.com/USER-NAME/REPO-NAME exists.
+
+If so, calls the CALLBACK function with a alist containing the ssh and
+https clone URLs. If the repo does not exists, calls the callback with
+nil as parameter."
+  (url-retrieve
+   (format "https://api.github.com/repos/%s/%s" user-name repo-name)
+   (lambda (&rest _rest) (funcall callback (h--fetch-github-parse-response(current-buffer))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Internal: code-root management functions
