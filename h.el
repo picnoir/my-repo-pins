@@ -161,6 +161,32 @@ nil as parameter."
         (t (error (format "No fetcher for %s" query-string)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Internal: repo URI parser
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun h--parse-repo-identifier (repo-str)
+  "Do its best to figure out which repo the user meant by REPO-STR.
+
+A valid REPO-STR is in one of the 4 following formats:
+
+1. project
+   Jump to the project if available, do not fetch a remote forge
+   project.
+2. owner/project
+   Open a promp with available projects + fetch all the remote
+   forges.
+3. forge.tld/owner/project
+   Open the project is available, fetch it if not.
+4. https://forge.tld/owner/project
+   Open the project is available, fetch it if not."
+  (cond
+   ((or (string-match "^https://.*/.*/.*$" repo-str)
+        (string-match "^.*/.*/.*$" repo-str))
+    'full-url)
+   ((string-match "^.*/.*$" repo-str) 'owner-repo)
+   (t 'repo)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Internal: code-root management functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

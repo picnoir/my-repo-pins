@@ -216,5 +216,15 @@ For reference: a empty test root looks like this:
       (insert-file-contents "./tests/fixtures/github-get-request-ko.txt")
       (should (equal (h--fetch-github-parse-response (current-buffer)) nil))))
 
+;; Test repo URI parser
+;;;;;;;;;;;;;;;;;
+
+(ert-deftest h--test-parse-repo-idetifier ()
+  "Test h--parse-repo-identifier."
+  (should (equal (h--parse-repo-identifier "https://github.com/Ninjatrappeur/h.el") 'full-url))
+  (should (equal (h--parse-repo-identifier "github.com/Ninjatrappeur/h.el") 'full-url))
+  (should (equal (h--parse-repo-identifier "Ninjatrappeur/h.el") 'owner-repo))
+  (should (equal (h--parse-repo-identifier "h.el") 'repo)))
+
 (provide 'h-tests)
 ;;; h-tests.el ends here
