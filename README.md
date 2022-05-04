@@ -6,10 +6,10 @@ Project checkout and navigation Emacs package heavily inspired by [zimbatm/h](ht
 TODO before first release:
 
 - [x] Replace `directory-files-recursively` with custom implemention. Support 'till Emacs 24.
-- [ ] Implement GitHub fetcher.
+- [x] Implement GitHub fetcher.
 - [ ] Implement GitLab fetcher.
-- [ ] Implement sr.ht fetcher.
 - [ ] Implement codeberg fetcher.
+- [ ] ~~Implement sr.ht fetcher~~: GraphQL, no doc, playground behind loginwall. I won't bother after all. PR welcome.
 - [ ] Document how to implement a new fetcher.
 - [ ] Explain what the hell this thing is about in readme.
 

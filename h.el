@@ -108,6 +108,58 @@ nil as parameter."
    (format "https://api.github.com/repos/%s/%s" user-name repo-name)
    (lambda (&rest _rest) (funcall callback (h--fetch-github-parse-response(current-buffer))))))
 
+;;; Gitea Fetcher
+
+(defun h--query-gitea (instance-url user-name repo-name callback)
+  "Queries the INSTANCE-URL gitea instance to retrieve a repo informations.
+This function will first try to dertermine whether the
+USER-NAME/REPO-NAME exists.
+
+If so, calls the CALLBACK function with a alist containing the ssh and
+https clone URLs. If the repo does not exists, calls the callback with
+nil as parameter."
+  (url-retrieve
+   (format "%s/api/v1/repos/%s/%s" instance-url user-name repo-name)
+   (lambda (&rest _rest) (funcall callback (h--fetch-gitea-parse-response(current-buffer))))))
+; Get /repos/owner/repo
+
+
+;;; Gitlab Fetcher
+
+(defun h--query-gitlab (instance-url user-name repo-name callback)
+  "Queries the INSTANCE-URL gitlab instance to retrieve a repo informations.
+This function will first try to dertermine whether the
+USER-NAME/REPO-NAME exists.
+
+If so, calls the CALLBACK function with a alist containing the ssh and
+https clone URLs. If the repo does not exists, calls the callback with
+nil as parameter."
+  (url-retrieve
+   (format "%s/api/v4/users/%s/projects" instance-url user-name)
+   (lambda (&rest _rest) (funcall callback nil))))
+;1. Find project in
+;https://gitlab.com/api/v4/users/ninjatrappeur/projects
+
+;;; Generic fetcher infrastructure
+
+(defcustom h-forge-fetchers
+  '((github . ((query . h--query-github) (fqdn . "github.com"))))
+  "List of forges for which we want to remote fetch projects."
+  :type '(alist :key-type 'symbol :value-type 'function)
+  :group 'h-group)
+
+(defun h--parse-query-string-for-forge (query-string)
+  "Parse QUERY-STRING for forge."
+  query-string)
+
+(defun h--dispatch-fetcher (query-string)
+  "Try to download QUERY-STRING via the fetchers registered in ‘h-forge-fetchers’."
+  (cond ((string-match-p "github.com" query-string)
+         (apply 'h--query-github (h--parse-query-string-for-forge query-string)))
+        ((string-match-p "gitlab.com" query-string)
+         (apply 'h--query-gitlab (h--parse-query-string-for-forge query-string)))
+        (t (error (format "No fetcher for %s" query-string)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Internal: code-root management functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
