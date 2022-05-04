@@ -186,6 +186,25 @@ A valid REPO-STR is in one of the 4 following formats:
    ((string-match "^.*/.*$" repo-str) 'owner-repo)
    (t 'repo)))
 
+(defun h--filepath-from-clone-url (clone-url)
+  "Return the relative path relative to the coderoot for CLONE-URL.
+
+CLONE-STR being the git clone URL we want to find the local path for."
+  (let*
+      ((is-http (string-match-p "^https?://.*$" clone-url))
+       (is-ssh (string-match-p "^\\(ssh://\\)?.*@.*:.*$" clone-url)))
+    (cond (is-http
+           (string-remove-suffix
+            ".git"
+            (cadr(split-string clone-url "//"))))
+          (is-ssh
+           (let*
+               ((url-without-user (cadr(split-string clone-url "@")))
+                (colon-split (split-string url-without-user ":"))
+                (fqdn (car colon-split))
+                (repo-url (string-remove-suffix ".git" (cadr colon-split))))
+             (format "%s/%s" fqdn repo-url))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Internal: code-root management functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

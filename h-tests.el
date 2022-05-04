@@ -226,5 +226,18 @@ For reference: a empty test root looks like this:
   (should (equal (h--parse-repo-identifier "Ninjatrappeur/h.el") 'owner-repo))
   (should (equal (h--parse-repo-identifier "h.el") 'repo)))
 
+(ert-deftest h--test-filepath-from-clone-url ()
+  "Test h--filepath-from-clone-url."
+  ;; HTTP/HTTPS
+  (should (equal (h--filepath-from-clone-url "http://github.com/NinjaTrappeur/h.el.git") "github.com/NinjaTrappeur/h.el"))
+  (should (equal (h--filepath-from-clone-url "http://github.com/NinjaTrappeur/h.el") "github.com/NinjaTrappeur/h.el"))
+  (should (equal (h--filepath-from-clone-url "https://github.com/NinjaTrappeur/h.el.git") "github.com/NinjaTrappeur/h.el"))
+  (should (equal (h--filepath-from-clone-url "https://github.com/NinjaTrappeur/h.el") "github.com/NinjaTrappeur/h.el"))
+  ;; SSH
+  (should (equal (h--filepath-from-clone-url "ssh://git@github.com:NinjaTrappeur/h.el.git") "github.com/NinjaTrappeur/h.el"))
+  (should (equal (h--filepath-from-clone-url "ssh://git@github.com:NinjaTrappeur/h.el") "github.com/NinjaTrappeur/h.el"))
+  (should (equal (h--filepath-from-clone-url "git@github.com:NinjaTrappeur/h.el.git") "github.com/NinjaTrappeur/h.el"))
+  (should (equal (h--filepath-from-clone-url "git@github.com:NinjaTrappeur/h.el") "github.com/NinjaTrappeur/h.el")))
+
 (provide 'h-tests)
 ;;; h-tests.el ends here
