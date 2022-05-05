@@ -49,7 +49,7 @@ If DIR doesn't exists, we create it first."
   (let ((d (file-name-as-directory dir)))
     (progn
        (unless (file-directory-p d) (make-directory d t))
-       (h--call-git-in-dir d "init" ))))
+       (h--call-git-in-dir d "init"))))
 
 ;; Test Dirs Setup
 ;;;;;;;;;;;;;;;;;
@@ -238,6 +238,19 @@ For reference: a empty test root looks like this:
   (should (equal (h--filepath-from-clone-url "ssh://git@github.com:NinjaTrappeur/h.el") "github.com/NinjaTrappeur/h.el"))
   (should (equal (h--filepath-from-clone-url "git@github.com:NinjaTrappeur/h.el.git") "github.com/NinjaTrappeur/h.el"))
   (should (equal (h--filepath-from-clone-url "git@github.com:NinjaTrappeur/h.el") "github.com/NinjaTrappeur/h.el")))
+
+(ert-deftest h--test-git-clone-in-dir ()
+  "Test the h--git-clone-in-dir function"
+    (h--tests-run-on-testroot-1
+     (lambda (dir)
+       (let
+           ((tmpdir (make-temp-file "h-test-" t)))
+         (progn
+           (h--git-clone-in-dir
+            (format "file://%s" (concat dir "example1.tld/user1/proj1/"))
+            tmpdir)
+           (should (file-exists-p (format "%s/.git" tmpdir)))
+           (delete-directory tmpdir t))))))
 
 (provide 'h-tests)
 ;;; h-tests.el ends here

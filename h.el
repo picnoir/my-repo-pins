@@ -59,10 +59,14 @@ Errors out if we can't find it."
           git-from-bin-path
           (error "Can't find git. Is h-git-bin correctly set?")))))
 
-(defun h--call-git-in-dir (dir args)
+(defun h--call-git-in-dir (dir &rest args)
   "Call the git binary as pointed by ‘h-git-bin’ in DIR with ARGS."
   (let ((default-directory dir))
-    (process-file (h--git-path) nil nil nil args)))
+    (apply 'process-file (seq-concatenate 'list `(,(h--git-path) nil "*h git log*" nil) args))))
+
+(defun h--git-clone-in-dir (clone-url checkout-filepath)
+  "Clone the CLONE-URL repo at CHECKOUT-FILEPATH."
+  (h--call-git-in-dir "~/" "clone" clone-url checkout-filepath))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Internal: builtin fetchers
