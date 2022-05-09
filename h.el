@@ -30,6 +30,7 @@
 
 (require 'json)
 (require 'url)
+(require 'cl-lib)
 ;; Required to batch eval the module: the substring functions are
 ;; loaded by default in interactive emacs, not in batch-mode emacs.
 (eval-when-compile (require 'subr-x))
@@ -294,6 +295,85 @@ an empty list."
          (projects-relative-to-code-root
           (mapcar remove-code-root-prefix-and-trailing-slash projects-absolute-path)))
       projects-relative-to-code-root)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Internal: code-root management functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun h--draw-forge-status (forge-result)
+  "Draws a FORGE-RESULT status to the current buffer."
+  (let*
+      ((status (cdr(assoc 'status forge-result)))
+       (key (cdr(assoc 'key forge-result)))
+       (forge-name (car forge-result))
+       (status-text (cond
+              ((eq status 'loading) (format "[?] %s (loading...)" forge-name))
+              ((eq status 'not-found) (format "[X] %s" forge-name))
+              ((eq status 'found) (format "[✓] %s" forge-name))
+              (t (error (format "h--draw-forge-status: Invalid forge status %s" status)))))
+       (text (format "%s [%s]\n" status-text (char-to-string key)))
+       (font-color (cond
+                    ((eq status 'loading) "orange")
+                    ((eq status 'not-found) "red")
+                    ((eq status 'found) "green")
+                    (t (error (format "h--draw-forge-status: Invalid forge status %s" status)))))
+       (original-point (point)))
+  (progn
+    (local-set-key (kbd (format "%s" (char-to-string key)))
+                   (lambda () (interactive) (message (format "Checking out: %s" forge-name))))
+    (insert text)
+    ;; Set color for status indicator
+    (set-text-properties original-point
+                         (+ original-point 4)
+                         `(face (:foreground ,font-color :weight bold)))
+    ;; Set color for key binding
+    (set-text-properties (- (point) 4) (point)
+                         '(face (:foreground "orange" :weight bold)))
+    )))
+
+(defun h--find-next-available-key-binding (cur-key-binding)
+  "Find a key binding starting CUR-KEY-BINDING for the h buffer.
+
+We're using the 1-9 numbers, then, once all the numbers are already in
+use, we start allocating the a-Z letters."
+  (cond ((= cur-key-binding ?9) ?a)
+        ((= cur-key-binding ?z) (error "h--find-next-available-key-binding: keys exhausted, can't bind any more"))
+        (t (+ cur-key-binding 1))))
+
+(defun h-draw-ui-buffer ()
+  "Draws the UI depending on the app state."
+  (interactive)
+  (let* (
+        (h-buffer (get-buffer-create "h.el"))
+        (previous-buffer (current-buffer))
+        (dummy-forge-status
+         '(
+           ("GitHub" . loading)
+           ("GitLab" . not-found)
+           ("Codeberg" . found)
+           ))
+        (forge-status-with-keys
+         (reverse
+          (cdr
+           (cl-reduce
+            (lambda
+              (acc e)
+              (append `(,(h--find-next-available-key-binding (car acc))
+                        (,(car e) .
+                         ((status . ,(cdr e))
+                          (key . ,(car acc)))))
+                      (cdr acc)))
+            dummy-forge-status
+            :initial-value '(?1 . ()))))))
+    (progn
+      (set-buffer h-buffer)
+      (setq buffer-read-only nil)
+      (erase-buffer)
+      (local-set-key (kbd "q") 'delete-window)
+      (seq-map (lambda (e) (h--draw-forge-status e)) forge-status-with-keys)
+      (setq buffer-read-only t)
+      (set-buffer previous-buffer)
+      (display-buffer h-buffer))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Interactive Commands
