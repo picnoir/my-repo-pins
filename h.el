@@ -74,11 +74,23 @@ Errors out if we can't find it."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; Generic fetcher infrastructure
+(defvar h-builtins-forge-fetchers
+  '(
+    (github .
+            ((query . h--query-github) (url . "https://github.com/.*/.*"))))
+  "Fetchers meant to be used in conjunction with ‘h-forge-fetchers’.
+
+This variable contains fetchers for:
+- github.com")
 
 (defcustom h-forge-fetchers
-  '((github . h--query-github))
+  h-builtins-forge-fetchers
   "List of forges for which we want to remote fetch projects."
-  :type '(alist :key-type 'symbol :value-type 'function)
+  :type '(alist
+          :key-type symbol
+          :value-type (alist
+                        :key-type symbol
+                        :value-type (choice function string)))
   :group 'h-group)
 
 ;;; Github Fetcher
@@ -185,7 +197,7 @@ A valid REPO-STR is in one of the 4 following formats:
 4. https://forge.tld/owner/project
    Open the project is available, fetch it if not."
   (cond
-   ((or (string-match "^https://.*/.*/.*$" repo-str)
+   ((or (string-match "^https?://.*/.*/.*$" repo-str)
         (string-match "^.*/.*/.*$" repo-str))
     'full-url)
    ((string-match "^.*/.*$" repo-str) 'owner-repo)
@@ -209,6 +221,26 @@ CLONE-STR being the git clone URL we want to find the local path for."
                 (fqdn (car colon-split))
                 (repo-url (string-remove-suffix ".git" (cadr colon-split))))
              (format "%s/%s" fqdn repo-url))))))
+
+(defun h--pick-relevant-forges (query-string forges-alist)
+  "Filters out relevant FORGES-ALIST entries for QUERY-STRING.
+
+If QUERY-STRING is in the form of owner/repo or just a repo name, do
+not filter anything.
+
+If QUERY-STRING is a fully qualified URL, exclusively use the relevant forge."
+  (let*
+      ((query-string-type (h--parse-repo-identifier query-string)))
+    (cond
+     ;; query-string is a full URL. Let's filter out the irrelevant forges.
+     ((eq query-string-type 'full-url)
+      (seq-filter
+       (lambda (e)
+         (let* ((forge-url-regex (cdr (assoc 'url e))))
+           (string-match-p forge-url-regex query-string)))
+       forges-alist))
+     ((eq query-string-type 'owner-repo) forges-alist)
+     ((eq query-string-type 'repo) forges-alist))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Internal: code-root management functions
@@ -297,7 +329,7 @@ an empty list."
       projects-relative-to-code-root)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Internal: code-root management functions
+;; Internal: UI
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun h--draw-forge-status (forge-result)
@@ -328,8 +360,7 @@ an empty list."
                          `(face (:foreground ,font-color :weight bold)))
     ;; Set color for key binding
     (set-text-properties (- (point) 4) (point)
-                         '(face (:foreground "orange" :weight bold)))
-    )))
+                         '(face (:foreground "orange" :weight bold))))))
 
 (defun h--find-next-available-key-binding (cur-key-binding)
   "Find a key binding starting CUR-KEY-BINDING for the h buffer.
@@ -337,7 +368,7 @@ an empty list."
 We're using the 1-9 numbers, then, once all the numbers are already in
 use, we start allocating the a-Z letters."
   (cond ((= cur-key-binding ?9) ?a)
-        ((= cur-key-binding ?z) (error "h--find-next-available-key-binding: keys exhausted, can't bind any more"))
+        ((= cur-key-binding ?z) (error "Keys exhausted, can't bind any more"))
         (t (+ cur-key-binding 1))))
 
 (defun h-draw-ui-buffer ()
@@ -350,8 +381,7 @@ use, we start allocating the a-Z letters."
          '(
            ("GitHub" . loading)
            ("GitLab" . not-found)
-           ("Codeberg" . found)
-           ))
+           ("Codeberg" . found)))
         (forge-status-with-keys
          (reverse
           (cdr

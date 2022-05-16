@@ -240,7 +240,7 @@ For reference: a empty test root looks like this:
   (should (equal (h--filepath-from-clone-url "git@github.com:NinjaTrappeur/h.el") "github.com/NinjaTrappeur/h.el")))
 
 (ert-deftest h--test-git-clone-in-dir ()
-  "Test the h--git-clone-in-dir function"
+  "Test the h--git-clone-in-dir function."
     (h--tests-run-on-testroot-1
      (lambda (dir)
        (let
@@ -251,6 +251,19 @@ For reference: a empty test root looks like this:
             tmpdir)
            (should (file-exists-p (format "%s/.git" tmpdir)))
            (delete-directory tmpdir t))))))
+
+(ert-deftest h--test-pick-relevant-forges ()
+  "Test the h--pick-relevant-forges function."
+  (let
+      ((forge-list
+        '(
+          (forge1 . ((query . h--query-github) (url . "https://forge1.com/.*/.*")))
+          (forge2 . ((query . h--query-github) (url . "https://forge2.com/.*/.*"))))))
+    (should (equal (h--pick-relevant-forges "owner/repo" forge-list) forge-list))
+    (should (equal (h--pick-relevant-forges "repo" forge-list) forge-list))
+    (should (equal
+             (h--pick-relevant-forges "https://forge1.com/owner/repo" forge-list)
+             '((forge1 . ((query . h--query-github) (url . "https://forge1.com/.*/.*"))))))))
 
 (provide 'h-tests)
 ;;; h-tests.el ends here
