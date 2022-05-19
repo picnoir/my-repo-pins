@@ -219,12 +219,20 @@ For reference: a empty test root looks like this:
 ;; Test repo URI parser
 ;;;;;;;;;;;;;;;;;
 
-(ert-deftest h--test-parse-repo-idetifier ()
+(ert-deftest h--test-parse-repo-identifier ()
   "Test h--parse-repo-identifier."
-  (should (equal (h--parse-repo-identifier "https://github.com/Ninjatrappeur/h.el") 'full-url))
-  (should (equal (h--parse-repo-identifier "github.com/Ninjatrappeur/h.el") 'full-url))
-  (should (equal (h--parse-repo-identifier "Ninjatrappeur/h.el") 'owner-repo))
-  (should (equal (h--parse-repo-identifier "h.el") 'repo)))
+  (should (equal
+           (h--parse-repo-identifier "https://github.com/Ninjatrappeur/h.el")
+           '((tag . full-url) (full-url . "https://github.com/Ninjatrappeur/h.el"))))
+  (should (equal
+           (h--parse-repo-identifier "github.com/Ninjatrappeur/h.el")
+           '((tag . full-url) (full-url . "github.com/Ninjatrappeur/h.el"))))
+  (should (equal
+           (h--parse-repo-identifier "Ninjatrappeur/h.el")
+           '((tag . owner-repo) (owner . "Ninjatrappeur") (repo . "h.el"))))
+  (should (equal
+           (h--parse-repo-identifier "h.el")
+           '((tag . repo) (repo . "h.el")))))
 
 (ert-deftest h--test-filepath-from-clone-url ()
   "Test h--filepath-from-clone-url."

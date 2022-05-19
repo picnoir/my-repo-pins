@@ -181,10 +181,10 @@ nil as parameter."
 ;; Internal: repo URI parser
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun h--parse-repo-identifier (repo-str)
-  "Do its best to figure out which repo the user meant by REPO-STR.
+(defun h--parse-repo-identifier (query-str)
+  "Do its best to figure out which repo the user meant by QUERY-STR.
 
-A valid REPO-STR is in one of the 4 following formats:
+A valid QUERY-STR is in one of the 4 following formats:
 
 1. project
    Jump to the project if available, do not fetch a remote forge
@@ -195,13 +195,32 @@ A valid REPO-STR is in one of the 4 following formats:
 3. forge.tld/owner/project
    Open the project is available, fetch it if not.
 4. https://forge.tld/owner/project
-   Open the project is available, fetch it if not."
+   Open the project is available, fetch it if not.
+
+This function will return a tagged union in the form of a alist. For
+each kind of format, it'll return something along the line of:
+
+\(('tag . 'full-url) ('full-url .\
+\"https://full-url.org/path/to/git/repo/checkout\"))
+or
+\(('tag . 'owner-repo) ('owner . \"NinjaTrappeur\") ('repo\
+. \"h.el\"))
+or
+\(('tag . 'repo) ('repo . \"h.el\"))"
   (cond
-   ((or (string-match "^https?://.*/.*/.*$" repo-str)
-        (string-match "^.*/.*/.*$" repo-str))
-    'full-url)
-   ((string-match "^.*/.*$" repo-str) 'owner-repo)
-   (t 'repo)))
+   ;; Full-url case
+   ((or (string-match "^https?://.*/.*/.*$" query-str)
+        (string-match "^.*/.*/.*$" query-str))
+    `((tag . full-url) (full-url . ,query-str)))
+   ;; owner/repo case
+   ((string-match "^.*/.*$" query-str)
+    (let*
+        ((splitted-query (split-string "Ninjatrappeur/h.el" "/"))
+         (owner (car splitted-query))
+         (repo (cadr splitted-query)))
+    `((tag . owner-repo) (owner . ,owner) (repo . ,repo))))
+   ;; repo case
+   (t `((tag . repo) (repo . ,query-str)))))
 
 (defun h--filepath-from-clone-url (clone-url)
   "Return the relative path relative to the coderoot for CLONE-URL.
@@ -230,7 +249,8 @@ not filter anything.
 
 If QUERY-STRING is a fully qualified URL, exclusively use the relevant forge."
   (let*
-      ((query-string-type (h--parse-repo-identifier query-string)))
+      ((query-string-type
+        (cdr (assoc 'tag (h--parse-repo-identifier query-string)))))
     (cond
      ;; query-string is a full URL. Let's filter out the irrelevant forges.
      ((eq query-string-type 'full-url)
