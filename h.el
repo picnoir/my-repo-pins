@@ -74,17 +74,19 @@ Errors out if we can't find it."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; Generic fetcher infrastructure
-(defvar h-builtins-forge-fetchers
-  '(
-    (github .
-            ((query . h--query-github) (url . "https://github.com/.*/.*"))))
+(defvar h--builtins-forge-fetchers
+  '((github .
+            ((query-user-repo . h--query-github-owner-repo)
+             (forge-str . "GitHub")
+             (url . "https?://github.com/.*"))))
+
   "Fetchers meant to be used in conjunction with ‘h-forge-fetchers’.
 
 This variable contains fetchers for:
 - github.com")
 
 (defcustom h-forge-fetchers
-  h-builtins-forge-fetchers
+  h--builtins-forge-fetchers
   "List of forges for which we want to remote fetch projects."
   :type '(alist
           :key-type symbol
@@ -93,13 +95,23 @@ This variable contains fetchers for:
                         :value-type (choice function string)))
   :group 'h-group)
 
+(defvar h--forge-fetchers-state '())
+
 ;;; Github Fetcher
-
-
 (defun h--fetch-github-parse-response (response-buffer)
   "Parse the RESPONSE-BUFFER containing a GET response from the GitHub API.
 
-Parsing a response from a GET https://api.github.com/repos/user/repo request."
+Parsing a response from a GET https://api.github.com/repos/user/repo request.
+
+If the repo does exists, returns a alist in the form of:
+
+`(
+  (ssh . SSH-CHECKOUT-URL)
+  (https . HTTPS-CHECKOUT-URL)
+  (forge-str . \"Github\")
+)
+
+Returns nil if the repo does not exists."
   (progn (set-buffer response-buffer)
          (goto-char (point-min))
          (if (not(eq(re-search-forward "^HTTP/1.1 200 OK$" nil t) nil))
@@ -108,12 +120,14 @@ Parsing a response from a GET https://api.github.com/repos/user/repo request."
                (re-search-forward "^$")
                (delete-region (point) (point-min))
                (let* ((parsed-buffer (json-read))
-                      (ssh-url (cdr(assoc 'ssh_url parsed-buffer)))
-                      (https-url (cdr(assoc 'clone_url parsed-buffer))))
-                 `((ssh . ,ssh-url) (https . ,https-url))))
+                      (ssh-url (alist-get 'ssh_url parsed-buffer))
+                      (https-url (alist-get 'clone_url parsed-buffer)))
+                 `((ssh . ,ssh-url)
+                   (https . ,https-url)
+                   (forge-str . "GitHub"))))
            nil)))
 
-(defun h--query-github (user-name repo-name callback)
+(defun h--query-github-owner-repo (user-name repo-name forge callback)
   "Queries the GitHub API to retrieve some infos about a GitHub repo.
 This function will first try to determine whether
 github.com/USER-NAME/REPO-NAME exists.
@@ -121,12 +135,12 @@ github.com/USER-NAME/REPO-NAME exists.
 If so, calls the CALLBACK function with a alist containing the ssh and
 https clone URLs. If the repo does not exists, calls the callback with
 nil as parameter."
-  (url-retrieve
-   (format "https://api.github.com/repos/%s/%s" user-name repo-name)
-   (lambda (&rest _rest) (funcall callback (h--fetch-github-parse-response(current-buffer))))))
+  (progn
+    (url-retrieve
+     (format "https://api.github.com/repos/%s/%s" user-name repo-name)
+     (lambda (&rest _rest) (funcall callback (h--fetch-github-parse-response(current-buffer)) forge)))))
 
 ;;; Gitea Fetcher
-
 (defun h--query-gitea (instance-url user-name repo-name callback)
   "Queries the INSTANCE-URL gitea instance to retrieve a repo informations.
 This function will first try to dertermine whether the
@@ -158,16 +172,6 @@ nil as parameter."
 ;https://gitlab.com/api/v4/users/ninjatrappeur/projects
 
 ;;; Generic fetcher infrastructure
-
-(defcustom h-forge-fetchers
-  '((github . ((query . h--query-github) (fqdn . "github.com"))))
-  "List of forges for which we want to remote fetch projects."
-  :type '(alist :key-type 'symbol :value-type 'function)
-  :group 'h-group)
-
-(defun h--parse-query-string-for-forge (query-string)
-  "Parse QUERY-STRING for forge."
-  query-string)
 
 (defun h--dispatch-fetcher (query-string)
   "Try to download QUERY-STRING via the fetchers registered in ‘h-forge-fetchers’."
@@ -250,13 +254,13 @@ not filter anything.
 If QUERY-STRING is a fully qualified URL, exclusively use the relevant forge."
   (let*
       ((query-string-type
-        (cdr (assoc 'tag (h--parse-repo-identifier query-string)))))
+        (alist-get 'tag (h--parse-repo-identifier query-string))))
     (cond
      ;; query-string is a full URL. Let's filter out the irrelevant forges.
      ((eq query-string-type 'full-url)
       (seq-filter
        (lambda (e)
-         (let* ((forge-url-regex (cdr (assoc 'url e))))
+         (let* ((forge-url-regex (alist-get 'url e)))
            (string-match-p forge-url-regex query-string)))
        forges-alist))
      ((eq query-string-type 'owner-repo) forges-alist)
@@ -353,10 +357,12 @@ an empty list."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun h--draw-forge-status (forge-result)
-  "Draws a FORGE-RESULT status to the current buffer."
+  "Draws a FORGE-RESULT status to the current buffer.
+
+FORGE-STATUS being a alist in the form of (FORGE-NAME . LOOKUP-STATUS)"
   (let*
-      ((status (cdr(assoc 'status forge-result)))
-       (key (cdr(assoc 'key forge-result)))
+      ((status (alist-get 'status forge-result))
+       (key (alist-get 'key forge-result))
        (forge-name (car forge-result))
        (status-text (cond
               ((eq status 'loading) (format "[?] %s (loading...)" forge-name))
@@ -391,9 +397,12 @@ use, we start allocating the a-Z letters."
         ((= cur-key-binding ?z) (error "Keys exhausted, can't bind any more"))
         (t (+ cur-key-binding 1))))
 
-(defun h-draw-ui-buffer ()
-  "Draws the UI depending on the app state."
-  (interactive)
+(defun h--draw-ui-buffer (forge-status)
+  "Draws the UI depending on the app state.
+
+FORGE-STATUS being a alist in the form of (FORGE-NAME . LOOKUP-STATUS)
+where FORGE-NAME is a string representing the name of a forge,
+LOOKUP-STATUS an atom that is either 'loading, 'not-found or 'found."
   (let* (
         (h-buffer (get-buffer-create "h.el"))
         (previous-buffer (current-buffer))
@@ -413,7 +422,7 @@ use, we start allocating the a-Z letters."
                          ((status . ,(cdr e))
                           (key . ,(car acc)))))
                       (cdr acc)))
-            dummy-forge-status
+            forge-status
             :initial-value '(?1 . ()))))))
     (progn
       (set-buffer h-buffer)
@@ -425,9 +434,45 @@ use, we start allocating the a-Z letters."
       (set-buffer previous-buffer)
       (display-buffer h-buffer))))
 
+(defun h--update-forges-state (forge-name new-state)
+  "Update ‘h--forge-fetchers-state’ for FORGE-NAME with NEW-STATE."
+  (progn
+    (setq h--forge-fetchers-state (assq-delete-all forge-name h--forge-fetchers-state))
+    (setq h--forge-fetchers-state (cons `(,forge-name . ,new-state) h--forge-fetchers-state))))
+
+(defun h--query-forge-fetchers (repo-query)
+  "Find repo matches to the relevant forges for REPO-QUERY."
+  (let* ((relevant-forges (h--pick-relevant-forges repo-query h-forge-fetchers))
+         (parsed-repo-query (h--parse-repo-identifier repo-query))
+         (repo-query-kind (alist-get 'tag parsed-repo-query)))
+    (cond
+     ((equal repo-query-kind 'owner-repo)
+      (seq-map
+       (lambda (forge)
+         (let* ((owner (alist-get 'owner parsed-repo-query))
+                (repo (alist-get 'repo parsed-repo-query))
+                (fetch-func (alist-get 'query-user-repo forge))
+                (forge-id (car forge)))
+           (apply `(,fetch-func
+                    ,owner
+                    ,repo
+                    ,forge
+                    (lambda (result forge)
+                        (h--update-forges-state (car forge) result))))))
+       relevant-forges))
+     ((equal repo-query-kind 'repo) (error (format "Can't checkout %s (for now), please specify a owner" repo-query)))
+     ((equal repo-query-kind 'full-url) (error "TODO: Can't checkout a full URL (for now)"))
+     (t (error repo-query-kind)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Interactive Commands
 ;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun h-checkout-project (user-query)
+  (interactive "s")
+  (progn
+    (h--query-forge-fetchers user-query)
+   ))
 
 (defun h-jump-to-project ()
   "Open a project contained in the ‘h-code-root’ directory.

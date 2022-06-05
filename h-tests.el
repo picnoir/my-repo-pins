@@ -208,7 +208,8 @@ For reference: a empty test root looks like this:
       (insert-file-contents "./tests/fixtures/github-get-request-ok.txt")
       (should (equal (h--fetch-github-parse-response (current-buffer))
                   '((ssh . "git@github.com:NinjaTrappeur/h.el.git")
-                    (https . "https://github.com/NinjaTrappeur/h.el.git"))))))
+                    (https . "https://github.com/NinjaTrappeur/h.el.git")
+                    (forge-str . "GitHub"))))))
 
 (ert-deftest h--tests-fetch-github-parse-response-ko ()
   "Test h--tests-fetch-github-parse-response with a fixture."
@@ -264,14 +265,16 @@ For reference: a empty test root looks like this:
   "Test the h--pick-relevant-forges function."
   (let
       ((forge-list
-        '(
-          (forge1 . ((query . h--query-github) (url . "https://forge1.com/.*/.*")))
-          (forge2 . ((query . h--query-github) (url . "https://forge2.com/.*/.*"))))))
+        '((forge1 . ((query-user-repo . h--query-github)
+                     (url . "https://forge1.com/.*/.*")))
+          (forge2 . ((query-user-repo . h--query-github)
+                     (url . "https://forge2.com/.*/.*"))))))
     (should (equal (h--pick-relevant-forges "owner/repo" forge-list) forge-list))
     (should (equal (h--pick-relevant-forges "repo" forge-list) forge-list))
     (should (equal
              (h--pick-relevant-forges "https://forge1.com/owner/repo" forge-list)
-             '((forge1 . ((query . h--query-github) (url . "https://forge1.com/.*/.*"))))))))
+             '((forge1 . ((query-user-repo . h--query-github)
+                          (url . "https://forge1.com/.*/.*"))))))))
 
 (provide 'h-tests)
 ;;; h-tests.el ends here
