@@ -208,8 +208,7 @@ For reference: a empty test root looks like this:
       (insert-file-contents "./tests/fixtures/github-get-request-ok.txt")
       (should (equal (h--fetch-github-parse-response (current-buffer))
                   '((ssh . "git@github.com:NinjaTrappeur/h.el.git")
-                    (https . "https://github.com/NinjaTrappeur/h.el.git")
-                    (forge-str . "GitHub"))))))
+                    (https . "https://github.com/NinjaTrappeur/h.el.git"))))))
 
 (ert-deftest h--tests-fetch-github-parse-response-ko ()
   "Test h--tests-fetch-github-parse-response with a fixture."

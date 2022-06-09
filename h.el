@@ -75,9 +75,8 @@ Errors out if we can't find it."
 
 ;;; Generic fetcher infrastructure
 (defvar h--builtins-forge-fetchers
-  '((github .
+  '(("GitHub" .
             ((query-user-repo . h--query-github-owner-repo)
-             (forge-str . "GitHub")
              (url . "https?://github.com/.*"))))
 
   "Fetchers meant to be used in conjunction with ‘h-forge-fetchers’.
@@ -123,8 +122,7 @@ Returns nil if the repo does not exists."
                       (ssh-url (alist-get 'ssh_url parsed-buffer))
                       (https-url (alist-get 'clone_url parsed-buffer)))
                  `((ssh . ,ssh-url)
-                   (https . ,https-url)
-                   (forge-str . "GitHub"))))
+                   (https . ,https-url))))
            nil)))
 
 (defun h--query-github-owner-repo (user-name repo-name forge callback)
