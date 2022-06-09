@@ -275,5 +275,51 @@ For reference: a empty test root looks like this:
              '((forge1 . ((query-user-repo . h--query-github)
                           (url . "https://forge1.com/.*/.*"))))))))
 
+;;; UI-related tests
+
+(ert-deftest h--test-add-keys-to-forge-status ()
+  "Test the h--add-keys-to-forge-status function."
+  (let
+      ((dummy-forge-query-status-one-result
+        '(("GitHub"
+          (ssh . "git@github.com:NinjaTrappeur/h.el.git")
+          (https . "https://github.com/NinjaTrappeur/h.el.git"))
+         ("GitLab" . not-found)))
+       (expected-forge-query-status-with-keys-one-result
+        `(("GitHub"
+           (status
+            (ssh . "git@github.com:NinjaTrappeur/h.el.git")
+            (https . "https://github.com/NinjaTrappeur/h.el.git"))
+          (key . ,?1))
+          ("GitLab" (status . not-found))))
+       (dummy-forge-query-status-two-results
+        '(("GitHub"
+           (ssh . "git@github.com:NinjaTrappeur/h.el.git")
+           (https . "https://github.com/NinjaTrappeur/h.el.git"))
+          ("Codeberg" . not-found)
+          ("GitLab"
+           (ssh . "git@gitlab.com:NinjaTrappeur/h.el.git")
+           (https . "https://gitlab.com/NinjaTrappeur/h.el.git"))))
+       (expected-forge-query-status-with-keys-two-results
+        `(("GitHub"
+           (status
+            (ssh . "git@github.com:NinjaTrappeur/h.el.git")
+            (https . "https://github.com/NinjaTrappeur/h.el.git"))
+           (key . ,'?1))
+          ("Codeberg" (status . not-found))
+          ("GitLab"
+           (status
+            (ssh . "git@gitlab.com:NinjaTrappeur/h.el.git")
+            (https . "https://gitlab.com/NinjaTrappeur/h.el.git"))
+           (key . ,'?2)))))
+
+    (should (equal
+             expected-forge-query-status-with-keys-one-result
+             (h--add-keys-to-forge-status dummy-forge-query-status-one-result)))
+    (should (equal
+             expected-forge-query-status-with-keys-two-results
+             (h--add-keys-to-forge-status dummy-forge-query-status-two-results)))
+    ))
+
 (provide 'h-tests)
 ;;; h-tests.el ends here

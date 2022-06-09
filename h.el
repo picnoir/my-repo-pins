@@ -354,10 +354,76 @@ an empty list."
 ;; Internal: UI
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun h--draw-forge-status (forge-result)
-  "Draws a FORGE-RESULT status to the current buffer.
+(defun h--draw-ui-buffer (forge-query-status)
+  "Draws the UI depending on the app state.
 
-FORGE-STATUS being a alist in the form of (FORGE-NAME . LOOKUP-STATUS)"
+FORGE-QUERY-STATUS being a alist in the form of (FORGE-NAME . LOOKUP-STATUS)
+where FORGE-NAME is a string representing the name of a forge,
+LOOKUP-STATUS an atom that is either 'loading, 'not-found or a list
+containing the lookup result.
+
+We're going to draw these forge query status results in a buffer and
+associate each of them with a key binding.
+
+, ‘h--draw-forge-status’ is in charge of
+drawing the forge status in the h.el buffer."
+  (let* (
+        (h-buffer (get-buffer-create "h.el"))
+        (previous-buffer (current-buffer))
+        (forge-status-with-keys (h--add-keys-to-forge-status forge-query-status)))
+    (progn
+      (set-buffer h-buffer)
+      (setq buffer-read-only nil)
+      (erase-buffer)
+      (local-set-key (kbd "q") 'delete-window)
+      (seq-map
+       (lambda (e) (h--draw-forge-status e)) forge-status-with-keys)
+      (setq buffer-read-only t)
+      (set-buffer previous-buffer)
+      (display-buffer h-buffer))))
+
+(defun h--add-keys-to-forge-status (forge-query-status)
+  "Add key bindings to relevant FORGE-QUERY-STATUS entries.
+
+FORGE-QUERY-STATUS is list of alists in the form of ((FORGE-NAME .
+LOOKUP-STATUS)) where LOOKUP-STATUS is either a list containing the
+lookup results or the 'not-found atom when no results could be found.
+This function adds a key binding alist to the LOOKUP-STATUS list when
+results have been found, nothing if the repo couldn't be found.
+
+‘h--find-next-available-key-binding’ is in charge of generating the
+key bindings."
+  (reverse
+   (cdr
+    (cl-reduce
+     (lambda
+       ;; In this fold, car of acc is the next key binding to
+       ;; associate, cdr the new forge-query-status.
+       (acc e)
+       (let* ((status (cdr e))
+              (key (car acc))
+              (isFound (listp status))
+              (nextKeybinding
+               (if isFound (h--find-next-available-key-binding (car acc)) (car acc)))
+              (forge-status-with-key
+               (if isFound
+                   `((status . ,status)
+                     (key . ,key))
+                 `((status . ,status)))))
+         (append `(,nextKeybinding
+                   (,(car e) . ,forge-status-with-key))
+                 (cdr acc))))
+     forge-query-status
+     :initial-value '(?1 . ())))))
+
+(defun h--draw-forge-status (forge-result)
+  "Draws FORGE-RESULT status to the current buffer.
+
+FORGE-STATUS being a alist in the form of (FORGE-NAME . LOOKUP-STATUS).
+
+LOOKUP-STATUS being either in the form of ('status . 'not-found),
+\('status . 'loading) or (('status . (ssh . ssh-checkout-url) (https .
+https-checkout-url)) ('key . \"1\"))."
   (let*
       ((status (alist-get 'status forge-result))
        (key (alist-get 'key forge-result))
@@ -365,26 +431,30 @@ FORGE-STATUS being a alist in the form of (FORGE-NAME . LOOKUP-STATUS)"
        (status-text (cond
               ((eq status 'loading) (format "[?] %s (loading...)" forge-name))
               ((eq status 'not-found) (format "[X] %s" forge-name))
-              ((eq status 'found) (format "[✓] %s" forge-name))
+              ((listp status) (format "[✓] %s" forge-name))
               (t (error (format "h--draw-forge-status: Invalid forge status %s" status)))))
-       (text (format "%s [%s]\n" status-text (char-to-string key)))
+       (text (if (null key)
+                 (format "%s\n" status-text)
+               (format "%s [%s]\n" status-text (char-to-string key))))
        (font-color (cond
                     ((eq status 'loading) "orange")
                     ((eq status 'not-found) "red")
-                    ((eq status 'found) "green")
+                    ((listp status) "green")
                     (t (error (format "h--draw-forge-status: Invalid forge status %s" status)))))
        (original-point (point)))
   (progn
-    (local-set-key (kbd (format "%s" (char-to-string key)))
-                   (lambda () (interactive) (message (format "Checking out: %s" forge-name))))
+    (if (not (null key))
+        (local-set-key (kbd (format "%s" (char-to-string key)))
+                   (lambda () (interactive) (message (format "Checking out: %s" forge-name)))))
     (insert text)
     ;; Set color for status indicator
     (set-text-properties original-point
                          (+ original-point 4)
                          `(face (:foreground ,font-color :weight bold)))
-    ;; Set color for key binding
-    (set-text-properties (- (point) 4) (point)
-                         '(face (:foreground "orange" :weight bold))))))
+    ;; Set color for key binding (if there's one)
+    (if (not (null key))
+        (set-text-properties (- (point) 4) (point)
+                             '(face (:foreground "orange" :weight bold)))))))
 
 (defun h--find-next-available-key-binding (cur-key-binding)
   "Find a key binding starting CUR-KEY-BINDING for the h buffer.
@@ -395,42 +465,6 @@ use, we start allocating the a-Z letters."
         ((= cur-key-binding ?z) (error "Keys exhausted, can't bind any more"))
         (t (+ cur-key-binding 1))))
 
-(defun h--draw-ui-buffer (forge-status)
-  "Draws the UI depending on the app state.
-
-FORGE-STATUS being a alist in the form of (FORGE-NAME . LOOKUP-STATUS)
-where FORGE-NAME is a string representing the name of a forge,
-LOOKUP-STATUS an atom that is either 'loading, 'not-found or 'found."
-  (let* (
-        (h-buffer (get-buffer-create "h.el"))
-        (previous-buffer (current-buffer))
-        (dummy-forge-status
-         '(
-           ("GitHub" . loading)
-           ("GitLab" . not-found)
-           ("Codeberg" . found)))
-        (forge-status-with-keys
-         (reverse
-          (cdr
-           (cl-reduce
-            (lambda
-              (acc e)
-              (append `(,(h--find-next-available-key-binding (car acc))
-                        (,(car e) .
-                         ((status . ,(cdr e))
-                          (key . ,(car acc)))))
-                      (cdr acc)))
-            forge-status
-            :initial-value '(?1 . ()))))))
-    (progn
-      (set-buffer h-buffer)
-      (setq buffer-read-only nil)
-      (erase-buffer)
-      (local-set-key (kbd "q") 'delete-window)
-      (seq-map (lambda (e) (h--draw-forge-status e)) forge-status-with-keys)
-      (setq buffer-read-only t)
-      (set-buffer previous-buffer)
-      (display-buffer h-buffer))))
 
 (defun h--update-forges-state (forge-name new-state)
   "Update ‘h--forge-fetchers-state’ for FORGE-NAME with NEW-STATE."
