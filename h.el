@@ -116,6 +116,20 @@ A ongoing/failed lookup will also be represented by an entry in this alist:
   "Mutex in charge of preventing several fetchers to update the state concurently.")
 
 ;;; Github Fetcher
+(defun h--query-github-owner-repo (user-name repo-name callback)
+  "Queries the GitHub API to retrieve some infos about a GitHub repo.
+This function will first try to determine whether
+github.com/USER-NAME/REPO-NAME exists.
+
+If so, calls the CALLBACK function with a alist containing the ssh and
+https clone URLs. If the repo does not exists, calls the callback with
+nil as parameter."
+  (progn
+    (url-retrieve
+     (format "https://api.github.com/repos/%s/%s" user-name repo-name)
+     (lambda (&rest _rest) (funcall callback (h--fetch-github-parse-response(current-buffer)))))))
+
+
 (defun h--fetch-github-parse-response (response-buffer)
   "Parse the RESPONSE-BUFFER containing a GET response from the GitHub API.
 
@@ -143,19 +157,6 @@ Returns nil if the repo does not exists."
                  `((ssh . ,ssh-url)
                    (https . ,https-url))))
            nil)))
-
-(defun h--query-github-owner-repo (user-name repo-name forge callback)
-  "Queries the GitHub API to retrieve some infos about a GitHub repo.
-This function will first try to determine whether
-github.com/USER-NAME/REPO-NAME exists.
-
-If so, calls the CALLBACK function with a alist containing the ssh and
-https clone URLs. If the repo does not exists, calls the callback with
-nil as parameter."
-  (progn
-    (url-retrieve
-     (format "https://api.github.com/repos/%s/%s" user-name repo-name)
-     (lambda (&rest _rest) (funcall callback (h--fetch-github-parse-response(current-buffer)) forge)))))
 
 ;;; Gitea Fetcher
 (defun h--query-gitea (instance-url user-name repo-name callback)
@@ -236,7 +237,7 @@ or
    ;; owner/repo case
    ((string-match "^.*/.*$" query-str)
     (let*
-        ((splitted-query (split-string "Ninjatrappeur/h.el" "/"))
+        ((splitted-query (split-string query-str "/"))
          (owner (car splitted-query))
          (repo (cadr splitted-query)))
     `((tag . owner-repo) (owner . ,owner) (repo . ,repo))))
