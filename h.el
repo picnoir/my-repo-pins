@@ -94,7 +94,26 @@ This variable contains fetchers for:
                         :value-type (choice function string)))
   :group 'h-group)
 
-(defvar h--forge-fetchers-state '())
+(defvar h--forge-fetchers-state '()
+
+  "Internal state where we keep a forge request status.
+
+We use that state to populate the UI buffer.
+
+This state is reprensented by a alist and looks something like that:
+
+\((\"FORGE-NAME1\"
+  (ssh . SSH-CHECKOUT-URL)
+  (https . HTTPS-CHECKOUT-URL)))
+
+A ongoing/failed lookup will also be represented by an entry in this alist:
+
+\(\"FORGE-NAME1\" . 'loading)
+\(\"FORGE-NAME1\" . 'not-found)")
+
+(defvar h--forge-fetchers-state-mutex
+  (make-mutex "h-ui-mutex")
+  "Mutex in charge of preventing several fetchers to update the state concurently.")
 
 ;;; Github Fetcher
 (defun h--fetch-github-parse-response (response-buffer)
@@ -469,11 +488,17 @@ use, we start allocating the a-Z letters."
 (defun h--update-forges-state (forge-name new-state)
   "Update ‘h--forge-fetchers-state’ for FORGE-NAME with NEW-STATE."
   (progn
+    (mutex-lock h--forge-fetchers-state-mutex)
     (setq h--forge-fetchers-state (assq-delete-all forge-name h--forge-fetchers-state))
-    (setq h--forge-fetchers-state (cons `(,forge-name . ,new-state) h--forge-fetchers-state))))
+    (setq h--forge-fetchers-state (cons `(,forge-name . ,new-state) h--forge-fetchers-state))
+    (h--draw-ui-buffer h--forge-fetchers-state)
+    (mutex-unlock h--forge-fetchers-state-mutex)))
+
 
 (defun h--query-forge-fetchers (repo-query)
-  "Find repo matches to the relevant forges for REPO-QUERY."
+  "Find repo matches to the relevant forges for REPO-QUERY then query forge.
+
+TODO: split that mess before release. We shouldn't query here."
   (let* ((relevant-forges (h--pick-relevant-forges repo-query h-forge-fetchers))
          (parsed-repo-query (h--parse-repo-identifier repo-query))
          (repo-query-kind (alist-get 'tag parsed-repo-query)))
@@ -484,13 +509,15 @@ use, we start allocating the a-Z letters."
          (let* ((owner (alist-get 'owner parsed-repo-query))
                 (repo (alist-get 'repo parsed-repo-query))
                 (fetch-func (alist-get 'query-user-repo forge))
-                (forge-id (car forge)))
+                (forge-str (car forge)))
            (apply `(,fetch-func
                     ,owner
                     ,repo
-                    ,forge
-                    (lambda (result forge)
-                        (h--update-forges-state (car forge) result))))))
+                    (lambda (result)
+                      (let ((new-state
+                             (if (null result) 'not-found result)))
+                      (progn
+                        (h--update-forges-state ,forge-str new-state))))))))
        relevant-forges))
      ((equal repo-query-kind 'repo) (error (format "Can't checkout %s (for now), please specify a owner" repo-query)))
      ((equal repo-query-kind 'full-url) (error "TODO: Can't checkout a full URL (for now)"))
@@ -503,8 +530,8 @@ use, we start allocating the a-Z letters."
 (defun h-checkout-project (user-query)
   (interactive "s")
   (progn
-    (h--query-forge-fetchers user-query)
-   ))
+    (setq h--forge-fetchers-state nil)
+    (h--query-forge-fetchers user-query)))
 
 (defun h-jump-to-project ()
   "Open a project contained in the ‘h-code-root’ directory.
