@@ -307,7 +307,7 @@ local directory"
 Errors out if ‘h-code-root’ has not been set yet."
     (progn (when (not h-code-root)
              (error "h-code-root has not been set. Please point it to your code root"))
-           (file-name-as-directory h-code-root)))
+           (expand-file-name (file-name-as-directory h-code-root))))
 
 
 (defun h--find-git-dirs-recursively (dir)
@@ -465,7 +465,11 @@ https-checkout-url)) ('key . \"1\"))."
   (progn
     (if (not (null key))
         (local-set-key (kbd (format "%s" (char-to-string key)))
-                   (lambda () (interactive) (message (format "Checking out: %s" forge-name)))))
+                       (lambda ()
+                         (interactive)
+                         (progn
+                           (delete-window)
+                           (h--clone-from-forge-result forge-result)))))
     (insert text)
     ;; Set color for status indicator
     (set-text-properties original-point
@@ -485,6 +489,20 @@ use, we start allocating the a-Z letters."
         ((= cur-key-binding ?z) (error "Keys exhausted, can't bind any more"))
         (t (+ cur-key-binding 1))))
 
+(defun h--clone-from-forge-result (forge-result)
+  (let*
+      ((forge-result-status (alist-get 'status (cdr forge-result)))
+       (ssh-url (alist-get 'ssh forge-result-status))
+       (http-url (alist-get 'https forge-result-status))
+       (code-root (h--safe-get-code-root))
+       (dest-dir (concat code-root (h--filepath-from-clone-url http-url))))
+    (progn
+      (message (format "Cloning %s to %s" ssh-url dest-dir)
+      (h--git-clone-in-dir ssh-url dest-dir)
+      (message (format "Successfully cloned %s" dest-dir))
+      (find-file dest-dir)))))
+
+;; Internal: Internal state management
 
 (defun h--update-forges-state (forge-name new-state)
   "Update ‘h--forge-fetchers-state’ for FORGE-NAME with NEW-STATE."
@@ -529,7 +547,7 @@ TODO: split that mess before release. We shouldn't query here."
 ;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun h-checkout-project (user-query)
-  (interactive "s")
+  (interactive "sGit repository to checkout: ")
   (progn
     (setq h--forge-fetchers-state nil)
     (h--query-forge-fetchers user-query)))
