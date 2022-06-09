@@ -49,7 +49,7 @@ If DIR doesn't exists, we create it first."
   (let ((d (file-name-as-directory dir)))
     (progn
        (unless (file-directory-p d) (make-directory d t))
-       (h--call-git-in-dir d "init" ))))
+       (h--call-git-in-dir d "init"))))
 
 ;; Test Dirs Setup
 ;;;;;;;;;;;;;;;;;
@@ -215,6 +215,111 @@ For reference: a empty test root looks like this:
     (with-temp-buffer
       (insert-file-contents "./tests/fixtures/github-get-request-ko.txt")
       (should (equal (h--fetch-github-parse-response (current-buffer)) nil))))
+
+;; Test repo URI parser
+;;;;;;;;;;;;;;;;;
+
+(ert-deftest h--test-parse-repo-identifier ()
+  "Test h--parse-repo-identifier."
+  (should (equal
+           (h--parse-repo-identifier "https://github.com/Ninjatrappeur/h.el")
+           '((tag . full-url) (full-url . "https://github.com/Ninjatrappeur/h.el"))))
+  (should (equal
+           (h--parse-repo-identifier "github.com/Ninjatrappeur/h.el")
+           '((tag . full-url) (full-url . "github.com/Ninjatrappeur/h.el"))))
+  (should (equal
+           (h--parse-repo-identifier "Ninjatrappeur/h.el")
+           '((tag . owner-repo) (owner . "Ninjatrappeur") (repo . "h.el"))))
+  (should (equal
+           (h--parse-repo-identifier "h.el")
+           '((tag . repo) (repo . "h.el")))))
+
+(ert-deftest h--test-filepath-from-clone-url ()
+  "Test h--filepath-from-clone-url."
+  ;; HTTP/HTTPS
+  (should (equal (h--filepath-from-clone-url "http://github.com/NinjaTrappeur/h.el.git") "github.com/NinjaTrappeur/h.el"))
+  (should (equal (h--filepath-from-clone-url "http://github.com/NinjaTrappeur/h.el") "github.com/NinjaTrappeur/h.el"))
+  (should (equal (h--filepath-from-clone-url "https://github.com/NinjaTrappeur/h.el.git") "github.com/NinjaTrappeur/h.el"))
+  (should (equal (h--filepath-from-clone-url "https://github.com/NinjaTrappeur/h.el") "github.com/NinjaTrappeur/h.el"))
+  ;; SSH
+  (should (equal (h--filepath-from-clone-url "ssh://git@github.com:NinjaTrappeur/h.el.git") "github.com/NinjaTrappeur/h.el"))
+  (should (equal (h--filepath-from-clone-url "ssh://git@github.com:NinjaTrappeur/h.el") "github.com/NinjaTrappeur/h.el"))
+  (should (equal (h--filepath-from-clone-url "git@github.com:NinjaTrappeur/h.el.git") "github.com/NinjaTrappeur/h.el"))
+  (should (equal (h--filepath-from-clone-url "git@github.com:NinjaTrappeur/h.el") "github.com/NinjaTrappeur/h.el")))
+
+(ert-deftest h--test-git-clone-in-dir ()
+  "Test the h--git-clone-in-dir function."
+    (h--tests-run-on-testroot-1
+     (lambda (dir)
+       (let
+           ((tmpdir (make-temp-file "h-test-" t)))
+         (progn
+           (h--git-clone-in-dir
+            (format "file://%s" (concat dir "example1.tld/user1/proj1/"))
+            tmpdir)
+           (should (file-exists-p (format "%s/.git" tmpdir)))
+           (delete-directory tmpdir t))))))
+
+(ert-deftest h--test-pick-relevant-forges ()
+  "Test the h--pick-relevant-forges function."
+  (let
+      ((forge-list
+        '((forge1 . ((query-user-repo . h--query-github)
+                     (url . "https://forge1.com/.*/.*")))
+          (forge2 . ((query-user-repo . h--query-github)
+                     (url . "https://forge2.com/.*/.*"))))))
+    (should (equal (h--pick-relevant-forges "owner/repo" forge-list) forge-list))
+    (should (equal (h--pick-relevant-forges "repo" forge-list) forge-list))
+    (should (equal
+             (h--pick-relevant-forges "https://forge1.com/owner/repo" forge-list)
+             '((forge1 . ((query-user-repo . h--query-github)
+                          (url . "https://forge1.com/.*/.*"))))))))
+
+;;; UI-related tests
+
+(ert-deftest h--test-add-keys-to-forge-status ()
+  "Test the h--add-keys-to-forge-status function."
+  (let
+      ((dummy-forge-query-status-one-result
+        '(("GitHub"
+          (ssh . "git@github.com:NinjaTrappeur/h.el.git")
+          (https . "https://github.com/NinjaTrappeur/h.el.git"))
+         ("GitLab" . not-found)))
+       (expected-forge-query-status-with-keys-one-result
+        `(("GitHub"
+           (status
+            (ssh . "git@github.com:NinjaTrappeur/h.el.git")
+            (https . "https://github.com/NinjaTrappeur/h.el.git"))
+          (key . ,?1))
+          ("GitLab" (status . not-found))))
+       (dummy-forge-query-status-two-results
+        '(("GitHub"
+           (ssh . "git@github.com:NinjaTrappeur/h.el.git")
+           (https . "https://github.com/NinjaTrappeur/h.el.git"))
+          ("Codeberg" . not-found)
+          ("GitLab"
+           (ssh . "git@gitlab.com:NinjaTrappeur/h.el.git")
+           (https . "https://gitlab.com/NinjaTrappeur/h.el.git"))))
+       (expected-forge-query-status-with-keys-two-results
+        `(("GitHub"
+           (status
+            (ssh . "git@github.com:NinjaTrappeur/h.el.git")
+            (https . "https://github.com/NinjaTrappeur/h.el.git"))
+           (key . ,'?1))
+          ("Codeberg" (status . not-found))
+          ("GitLab"
+           (status
+            (ssh . "git@gitlab.com:NinjaTrappeur/h.el.git")
+            (https . "https://gitlab.com/NinjaTrappeur/h.el.git"))
+           (key . ,'?2)))))
+
+    (should (equal
+             expected-forge-query-status-with-keys-one-result
+             (h--add-keys-to-forge-status dummy-forge-query-status-one-result)))
+    (should (equal
+             expected-forge-query-status-with-keys-two-results
+             (h--add-keys-to-forge-status dummy-forge-query-status-two-results)))
+    ))
 
 (provide 'h-tests)
 ;;; h-tests.el ends here
