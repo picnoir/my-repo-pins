@@ -5,7 +5,7 @@
 ;;; Maintainer: Félix Baylac Jacqué <felix at alternativebit.fr>
 ;;; Version: 1.14.0
 ;;; Homepage: https://alternativebit.fr/TODO
-;;; Package-Requires: ((emacs "25.1"))
+;;; Package-Requires: ((emacs "26.1"))
 
 ;;; License:
 
