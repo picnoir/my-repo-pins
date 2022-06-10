@@ -490,17 +490,34 @@ use, we start allocating the a-Z letters."
         (t (+ cur-key-binding 1))))
 
 (defun h--clone-from-forge-result (forge-result)
+  "Clone a repository using the FORGE-RESULT alist.
+
+The FORGE-RESULT alist is in the form of (status . (https .
+HTTPS-CHECKOUT-URL) (ssh . SSH-CHECKOUT-URL))
+
+We'll first try to clone the ssh url: it's more convenient for the
+user auth-wise. If the ssh clone fails, we'll fallback on the HTTPS
+url."
   (let*
       ((forge-result-status (alist-get 'status (cdr forge-result)))
        (ssh-url (alist-get 'ssh forge-result-status))
        (http-url (alist-get 'https forge-result-status))
        (code-root (h--safe-get-code-root))
-       (dest-dir (concat code-root (h--filepath-from-clone-url http-url))))
+       (dest-dir (concat code-root (h--filepath-from-clone-url http-url)))
+       (clone-exit-code 1))
     (progn
-      (message (format "Cloning %s to %s" ssh-url dest-dir)
-      (h--git-clone-in-dir ssh-url dest-dir)
-      (message (format "Successfully cloned %s" dest-dir))
-      (find-file dest-dir)))))
+      (message (format "Cloning %s to %s" ssh-url dest-dir))
+      (setq clone-exit-code (h--git-clone-in-dir ssh-url dest-dir))
+      (if (not (equal clone-exit-code 0))
+          (progn
+            (message (format "Failed to clone %s" ssh-url))
+            (message (format "Trying again with %s" http-url))
+            (setq clone-exit-code(h--git-clone-in-dir http-url dest-dir))))
+      (if (equal clone-exit-code 0)
+          (progn
+            (message (format "Successfully cloned %s" dest-dir))
+            (find-file dest-dir))
+        (error (format "Cannot clone %s nor %s." ssh-url http-url))))))
 
 ;; Internal: Internal state management
 
