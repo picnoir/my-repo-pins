@@ -556,14 +556,21 @@ TODO: split that mess before release. We shouldn't query here."
                         (h--update-forges-state ,forge-str new-state))))))))
        relevant-forges))
      ((equal repo-query-kind 'repo) (error (format "Can't checkout %s (for now), please specify a owner" repo-query)))
-     ((equal repo-query-kind 'full-url) (error "TODO: Can't checkout a full URL (for now)"))
-     (t (error repo-query-kind)))))
+     ((equal repo-query-kind 'full-url)
+      (let*
+          ((code-root (h--safe-get-code-root))
+           (dest-dir (concat code-root (h--filepath-from-clone-url repo-query))))
+        (progn
+          (h--git-clone-in-dir repo-query dest-dir)
+          (find-file dest-dir))))
+    (t (error repo-query-kind)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Interactive Commands
 ;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun h-checkout-project (user-query)
+(defun h-clone-project (user-query)
+  "Clone USER-QUERY in its appropriate directory in ‘h-code-root’."
   (interactive "sGit repository to checkout: ")
   (progn
     (setq h--forge-fetchers-state nil)
