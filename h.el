@@ -199,7 +199,7 @@ Returns nil if the repo does not exists."
 ;;         ;;  (apply 'h--query-gitlab (h--parse-query-string-for-forge query-string)))
 ;;          (t (error (format "No fetcher for %s" query-string)))))
 
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Internal: repo URI parser
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -519,7 +519,30 @@ url."
             (find-file dest-dir))
         (error (format "Cannot clone %s nor %s." ssh-url http-url))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Internal: improving builtin autocomplete
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defun h--completing-read-or-custom (prompt collection)
+  "Behaves similarly to ‘complete-read’.
+
+See the ‘complete-read’ documentation for more details about PROMPT
+and COLLECTION.
+
+Behaves similarly to ‘complete-read’ with REQUIRE-MATCH set to nil
+except it'll return an extra element specifying whether the input was
+found in COLLECTION or if the result is a custom user-provided input.
+
+Returns either ('in-collection . READ-RESULT) or ('user-provided .
+READ-RESULT)"
+  (let ((read-result (completing-read prompt collection nil nil "")))
+    (if (member read-result collection)
+        `(in-collection . ,read-result)
+      `(user-provided . ,read-result))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Internal: Internal state management
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun h--update-forges-state (forge-name new-state)
   "Update ‘h--forge-fetchers-state’ for FORGE-NAME with NEW-STATE."
@@ -569,6 +592,7 @@ TODO: split that mess before release. We shouldn't query here."
 ;; Interactive Commands
 ;;;;;;;;;;;;;;;;;;;;;;;;
 
+;;;###autoload
 (defun h-clone-project (user-query)
   "Clone USER-QUERY in its appropriate directory in ‘h-code-root’."
   (interactive "sGit repository to checkout: ")
@@ -576,19 +600,23 @@ TODO: split that mess before release. We shouldn't query here."
     (setq h--forge-fetchers-state nil)
     (h--query-forge-fetchers user-query)))
 
+;;;###autoload
 (defun h-jump-to-project ()
   "Open a project contained in the ‘h-code-root’ directory.
-If the project is not here yet, check it out from the available sources."
+If the project is not here yet, check it out from the available forge
+sources."
   (interactive)
-  (let* ((selected-project-from-coderoot
-          (completing-read
+  (let ((user-query
+         (h--completing-read-or-custom
            "Available projects: "
-           (h--get-code-root-projects (h--safe-get-code-root))
-           nil t ""))
-         (selected-project-absolute-path (concat (h--safe-get-code-root) selected-project-from-coderoot)))
-    (if (file-directory-p selected-project-absolute-path)
-        (find-file selected-project-absolute-path)
-      (error "NOT IMPLEMENTED: cannot checkout a new project for now"))))
+           (h--get-code-root-projects (h--safe-get-code-root)))))
+    (cond
+     ((equal (car user-query) 'in-collection)
+      (let ((selected-project-absolute-path (concat (h--safe-get-code-root) (cdr user-query))))
+        (find-file selected-project-absolute-path)))
+     ((equal (car user-query) 'user-provided)
+      (h-clone-project (cdr user-query))))))
+
 
 (provide 'h)
 ;;; h.el ends here
