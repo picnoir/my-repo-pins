@@ -374,6 +374,31 @@ an empty list."
 ;; Internal: UI
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defun h--evil-safe-binding (kbd action)
+  "Bind ACTION to the KBD keyboard key.
+
+This key binding will be bound to the current buffer. If evil-mode is
+used, the key binding will be bound to the normal mode as well."
+  (let ((evil-mode-enabled (member 'evil-mode minor-mode-list)))
+    (if evil-mode-enabled
+        (progn
+          (local-set-key kbd action)
+          (when (require 'evil-core nil t)
+            ;; Buckle up, dirty hack ahead:
+            ;;
+            ;; As I am writing this, there's no way to tell the emacs
+            ;; byte compiler a particular dependency is optional.
+            ;; Here, I want to use a evil-mode function *IFF*
+            ;; evil-mode is already installed and used for the current
+            ;; buffer.
+            ;; The only way around I found is to prevent emacs to
+            ;; bytecode-compile the evil function by deffering the
+            ;; evaluation through a runtime eval. It's not a big deal
+            ;; performance-wise: evil-local-set-key is pretty cheap
+            ;; and not frequently used in our codebase.
+            (eval '(evil-local-set-key 'normal kbd action))))
+      (local-set-key kbd action))))
+
 (defun h--draw-ui-buffer (forge-query-status)
   "Draws the UI depending on the app state.
 
@@ -395,12 +420,12 @@ drawing the forge status in the h.el buffer."
       (set-buffer h-buffer)
       (setq buffer-read-only nil)
       (erase-buffer)
-      (local-set-key (kbd "q") 'delete-window)
+      (h--evil-safe-binding (kbd "q") 'delete-window)
       (seq-map
        (lambda (e) (h--draw-forge-status e)) forge-status-with-keys)
       (setq buffer-read-only t)
       (set-buffer previous-buffer)
-      (display-buffer h-buffer))))
+      (select-window (display-buffer h-buffer)))))
 
 (defun h--add-keys-to-forge-status (forge-query-status)
   "Add key bindings to relevant FORGE-QUERY-STATUS entries.
@@ -464,7 +489,7 @@ https-checkout-url)) ('key . \"1\"))."
        (original-point (point)))
   (progn
     (if (not (null key))
-        (local-set-key (kbd (format "%s" (char-to-string key)))
+        (h--evil-safe-binding (kbd (format "%s" (char-to-string key)))
                        (lambda ()
                          (interactive)
                          (progn
