@@ -396,16 +396,19 @@ used, the key binding will be bound to the normal mode as well."
             ;; evaluation through a runtime eval. It's not a big deal
             ;; performance-wise: evil-local-set-key is pretty cheap
             ;; and not frequently used in our codebase.
-            (eval '(evil-local-set-key 'normal kbd action))))
+            (eval `(evil-local-set-key 'normal ,kbd ',action))))
       (local-set-key kbd action))))
 
-(defun h--draw-ui-buffer (forge-query-status)
+(defun h--draw-ui-buffer (forge-query-status user-query)
   "Draws the UI depending on the app state.
 
 FORGE-QUERY-STATUS being a alist in the form of (FORGE-NAME . LOOKUP-STATUS)
 where FORGE-NAME is a string representing the name of a forge,
 LOOKUP-STATUS an atom that is either 'loading, 'not-found or a list
 containing the lookup result.
+
+USER-QUERY being the original user query we're trying to find a repo
+to clone for.
 
 We're going to draw these forge query status results in a buffer and
 associate each of them with a key binding.
@@ -414,18 +417,28 @@ associate each of them with a key binding.
 drawing the forge status in the h.el buffer."
   (let* (
         (h-buffer (get-buffer-create "h.el"))
+        (h-window nil)
         (previous-buffer (current-buffer))
         (forge-status-with-keys (h--add-keys-to-forge-status forge-query-status)))
     (progn
       (set-buffer h-buffer)
       (setq buffer-read-only nil)
       (erase-buffer)
-      (h--evil-safe-binding (kbd "q") 'delete-window)
+      (insert (format "Looking up for %s in different forges:\n\n\n" user-query))
+      (set-text-properties 1 (point) `(face (:foreground "orange" :weight bold)))
       (seq-map
        (lambda (e) (h--draw-forge-status e)) forge-status-with-keys)
+      (insert "\n\nPlease select the forge we should clone the project from.\n")
+      (insert "Press q to close this window.")
       (setq buffer-read-only t)
+      (h--evil-safe-binding (kbd "q")
+                            `(lambda () (interactive)
+                               (progn
+                                 (delete-window)
+                                 (kill-buffer ,h-buffer))))
       (set-buffer previous-buffer)
-      (select-window (display-buffer h-buffer)))))
+      (setq h-window (display-buffer h-buffer))
+      (select-window h-window))))
 
 (defun h--add-keys-to-forge-status (forge-query-status)
   "Add key bindings to relevant FORGE-QUERY-STATUS entries.
@@ -486,15 +499,17 @@ https-checkout-url)) ('key . \"1\"))."
                     ((eq status 'not-found) "red")
                     ((listp status) "green")
                     (t (error (format "h--draw-forge-status: Invalid forge status %s" status)))))
+       (h-buffer (current-buffer))
        (original-point (point)))
   (progn
     (if (not (null key))
         (h--evil-safe-binding (kbd (format "%s" (char-to-string key)))
-                       (lambda ()
+                       `(lambda ()
                          (interactive)
                          (progn
                            (delete-window)
-                           (h--clone-from-forge-result forge-result)))))
+                           (kill-buffer ,h-buffer)
+                           (h--clone-from-forge-result ',forge-result)))))
     (insert text)
     ;; Set color for status indicator
     (set-text-properties original-point
@@ -569,13 +584,15 @@ READ-RESULT)"
 ;; Internal: Internal state management
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun h--update-forges-state (forge-name new-state)
-  "Update ‘h--forge-fetchers-state’ for FORGE-NAME with NEW-STATE."
+(defun h--update-forges-state (forge-name new-state user-query)
+  "Update ‘h--forge-fetchers-state’ for FORGE-NAME with NEW-STATE.
+
+USER-QUERY was the original query for this state update."
   (progn
     (mutex-lock h--forge-fetchers-state-mutex)
     (setq h--forge-fetchers-state (assq-delete-all forge-name h--forge-fetchers-state))
     (setq h--forge-fetchers-state (cons `(,forge-name . ,new-state) h--forge-fetchers-state))
-    (h--draw-ui-buffer h--forge-fetchers-state)
+    (h--draw-ui-buffer h--forge-fetchers-state user-query)
     (mutex-unlock h--forge-fetchers-state-mutex)))
 
 
@@ -601,7 +618,7 @@ TODO: split that mess before release. We shouldn't query here."
                       (let ((new-state
                              (if (null result) 'not-found result)))
                       (progn
-                        (h--update-forges-state ,forge-str new-state))))))))
+                        (h--update-forges-state ,forge-str new-state ,repo-query))))))))
        relevant-forges))
      ((equal repo-query-kind 'repo) (error (format "Can't checkout %s (for now), please specify a owner" repo-query)))
      ((equal repo-query-kind 'full-url)
