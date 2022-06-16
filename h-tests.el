@@ -257,6 +257,8 @@ For reference: a empty test root looks like this:
   (should (equal (h--filepath-from-clone-url "http://github.com/NinjaTrappeur/h.el") "github.com/NinjaTrappeur/h.el"))
   (should (equal (h--filepath-from-clone-url "https://github.com/NinjaTrappeur/h.el.git") "github.com/NinjaTrappeur/h.el"))
   (should (equal (h--filepath-from-clone-url "https://github.com/NinjaTrappeur/h.el") "github.com/NinjaTrappeur/h.el"))
+  (should (equal (h--filepath-from-clone-url "http://git.savannah.gnu.org/cgit/emacs/elpa.git") "git.savannah.gnu.org/cgit/emacs/elpa"))
+  (should (equal (h--filepath-from-clone-url "https://git.savannah.gnu.org/git/emacs.git") "git.savannah.gnu.org/git/emacs"))
   ;; SSH
   (should (equal (h--filepath-from-clone-url "ssh://git@github.com:NinjaTrappeur/h.el.git") "github.com/NinjaTrappeur/h.el"))
   (should (equal (h--filepath-from-clone-url "ssh://git@github.com:NinjaTrappeur/h.el") "github.com/NinjaTrappeur/h.el"))
@@ -275,21 +277,6 @@ For reference: a empty test root looks like this:
             tmpdir)
            (should (file-exists-p (format "%s/.git" tmpdir)))
            (delete-directory tmpdir t))))))
-
-(ert-deftest h--test-pick-relevant-forges ()
-  "Test the h--pick-relevant-forges function."
-  (let
-      ((forge-list
-        '((forge1 . ((query-user-repo . h--query-github)
-                     (url . "https://forge1.com/.*/.*")))
-          (forge2 . ((query-user-repo . h--query-github)
-                     (url . "https://forge2.com/.*/.*"))))))
-    (should (equal (h--pick-relevant-forges "owner/repo" forge-list) forge-list))
-    (should (equal (h--pick-relevant-forges "repo" forge-list) forge-list))
-    (should (equal
-             (h--pick-relevant-forges "https://forge1.com/owner/repo" forge-list)
-             '((forge1 . ((query-user-repo . h--query-github)
-                          (url . "https://forge1.com/.*/.*"))))))))
 
 ;;; UI-related tests
 

@@ -76,8 +76,7 @@ Errors out if we can't find it."
 ;;; Generic fetcher infrastructure
 (defvar h--builtins-forge-fetchers
   '(("GitHub.com" .
-     ((query-user-repo . h--query-github-owner-repo)
-      (url . "https?://github.com/.*")))
+     ((query-user-repo . h--query-github-owner-repo)))
     ("GitLab.com" .
      ((query-user-repo . (lambda (owner repo cb) (h--query-gitlab-owner-repo "gitlab.com" owner repo cb)))))
     ("git.sr.ht" .
@@ -329,27 +328,6 @@ CLONE-STR being the git clone URL we want to find the local path for."
                 (fqdn (car colon-split))
                 (repo-url (string-remove-suffix ".git" (cadr colon-split))))
              (format "%s/%s" fqdn repo-url))))))
-
-(defun h--pick-relevant-forges (query-string forges-alist)
-  "Filters out relevant FORGES-ALIST entries for QUERY-STRING.
-
-If QUERY-STRING is in the form of owner/repo or just a repo name, do
-not filter anything.
-
-If QUERY-STRING is a fully qualified URL, exclusively use the relevant forge."
-  (let*
-      ((query-string-type
-        (alist-get 'tag (h--parse-repo-identifier query-string))))
-    (cond
-     ;; query-string is a full URL. Let's filter out the irrelevant forges.
-     ((eq query-string-type 'full-url)
-      (seq-filter
-       (lambda (e)
-         (let* ((forge-url-regex (alist-get 'url e)))
-           (string-match-p forge-url-regex query-string)))
-       forges-alist))
-     ((eq query-string-type 'owner-repo) forges-alist)
-     ((eq query-string-type 'repo) forges-alist))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Internal: code-root management functions
@@ -667,8 +645,7 @@ USER-QUERY was the original query for this state update."
   "Find repo matches to the relevant forges for REPO-QUERY then query forge.
 
 TODO: split that mess before release. We shouldn't query here."
-  (let* ((relevant-forges (h--pick-relevant-forges repo-query h-forge-fetchers))
-         (parsed-repo-query (h--parse-repo-identifier repo-query))
+  (let* ((parsed-repo-query (h--parse-repo-identifier repo-query))
          (repo-query-kind (alist-get 'tag parsed-repo-query)))
     (cond
      ((equal repo-query-kind 'owner-repo)
@@ -686,7 +663,7 @@ TODO: split that mess before release. We shouldn't query here."
                              (if (null result) 'not-found result)))
                       (progn
                         (h--update-forges-state ,forge-str new-state ,repo-query))))))))
-       relevant-forges))
+       h-forge-fetchers))
      ((equal repo-query-kind 'repo) (error (format "Can't checkout %s (for now), please specify a owner" repo-query)))
      ((equal repo-query-kind 'full-url)
       (let*
