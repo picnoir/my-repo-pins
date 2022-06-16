@@ -216,6 +216,22 @@ For reference: a empty test root looks like this:
       (insert-file-contents "./tests/fixtures/github-get-request-ko.txt")
       (should (equal (h--fetch-github-parse-response (current-buffer)) nil))))
 
+;; Gitea
+
+(ert-deftest h--tests-fetch-gitea-parse-response-ok ()
+  "Test h--tests-fetch-gitea-parse-response with a fixture."
+    (with-temp-buffer
+      (insert-file-contents "./tests/fixtures/gitea-get-request-ok.txt")
+      (should (equal (h--fetch-gitea-parse-response (current-buffer))
+                  '((ssh . "gitea@git.alternativebit.fr:NinjaTrappeur/h.el.git")
+                    (https . "https://git.alternativebit.fr/NinjaTrappeur/h.el.git"))))))
+
+(ert-deftest h--tests-fetch-gitea-parse-response-ko ()
+  "Test h--tests-fetch-gitea-parse-response with a fixture."
+    (with-temp-buffer
+      (insert-file-contents "./tests/fixtures/gitea-get-request-ko.txt")
+      (should (equal (h--fetch-gitea-parse-response (current-buffer)) nil))))
+
 ;; Test repo URI parser
 ;;;;;;;;;;;;;;;;;
 

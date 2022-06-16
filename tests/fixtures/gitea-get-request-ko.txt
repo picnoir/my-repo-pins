@@ -1,0 +1,11 @@
+HTTP/1.1 404 Not Found
+Server: nginx
+Date: Thu, 16 Jun 2022 16:54:27 GMT
+Content-Type: application/json;charset=utf-8
+Content-Length: 108
+Connection: keep-alive
+Set-Cookie: _csrf=A_VRhpShoO8WBnU2gvYqJZ_z2_86MTY1NTM5ODQ2Nzc5NjM3NTEwNw; Path=/; Expires=Fri, 17 Jun 2022 16:54:27 GMT; HttpOnly; Secure; SameSite=Lax
+X-Content-Type-Options: nosniff
+X-Frame-Options: SAMEORIGIN
+
+{"errors":null,"message":"The target couldn't be found.","url":"https://git.alternativebit.fr/api/swagger"}

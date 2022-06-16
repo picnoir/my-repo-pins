@@ -225,18 +225,44 @@ Returns nil if the repo does not exists."
            nil)))
 
 ;;; Gitea Fetcher
-;; (defun h--query-gitea (instance-url user-name repo-name callback)
-;;   "Queries the INSTANCE-URL gitea instance to retrieve a repo informations.
-;; This function will first try to dertermine whether the
-;; USER-NAME/REPO-NAME exists.
+(defun h--query-gitea-owner-repo (instance-url user-name repo-name callback)
+  "Queries the INSTANCE-URL gitea instance to retrieve a repo informations.
+This function will first try to dertermine whether the
+USER-NAME/REPO-NAME exists.
 
-;; If so, calls the CALLBACK function with a alist containing the ssh and
-;; https clone URLs. If the repo does not exists, calls the callback with
-;; nil as parameter."
-;;   (url-retrieve
-;;    (format "%s/api/v1/repos/%s/%s" instance-url user-name repo-name)
-;;    (lambda (&rest _rest) (funcall callback (h--fetch-gitea-parse-response(current-buffer))))))
-;; ; Get /repos/owner/repo
+If so, calls the CALLBACK function with a alist containing the ssh and
+https clone URLs. If the repo does not exists, calls the callback with
+nil as parameter."
+  (url-retrieve
+   (format "https://%s/api/v1/repos/%s/%s" instance-url user-name repo-name)
+   (lambda (&rest _rest) (funcall callback (h--fetch-gitea-parse-response(current-buffer))))))
+
+(defun h--fetch-gitea-parse-response (response-buffer)
+  "Parse the RESPONSE-BUFFER containing a GET response from the Gitea API.
+
+Parsing a response from a GET https://instance/api/v1/repos/user/repo request.
+
+If the repo does exists, returns a alist in the form of:
+
+`(
+  (ssh . SSH-CHECKOUT-URL)
+  (https . HTTPS-CHECKOUT-URL)
+)
+
+Returns nil if the repo does not exists."
+  (progn (set-buffer response-buffer)
+         (goto-char (point-min))
+         (if (not(eq(re-search-forward "^HTTP/1.1 200 OK$" nil t) nil))
+             (progn
+               (goto-char (point-min))
+               (re-search-forward "^$")
+               (delete-region (point) (point-min))
+               (let* ((parsed-buffer (json-read))
+                      (ssh-url (alist-get 'ssh_url parsed-buffer))
+                      (https-url (alist-get 'clone_url parsed-buffer)))
+                 `((ssh . ,ssh-url)
+                   (https . ,https-url))))
+           nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Internal: repo URI parser
