@@ -645,12 +645,12 @@ TODO: split that mess before release. We shouldn't query here."
 ;;;###autoload
 (defun h-jump-to-project ()
   "Open a project contained in the ‘h-code-root’ directory.
-If the project is not here yet, check it out from the available forge
-sources."
+If the project is not in the ‘h-code-root’ yet, check it out from the
+available forge sources."
   (interactive)
   (let ((user-query
          (h--completing-read-or-custom
-           "Available projects: "
+           "Jump to project: "
            (h--get-code-root-projects (h--safe-get-code-root)))))
     (cond
      ((equal (car user-query) 'in-collection)
