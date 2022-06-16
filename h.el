@@ -75,9 +75,11 @@ Errors out if we can't find it."
 
 ;;; Generic fetcher infrastructure
 (defvar h--builtins-forge-fetchers
-  '(("GitHub" .
-            ((query-user-repo . h--query-github-owner-repo)
-             (url . "https?://github.com/.*"))))
+  '(("GitHub.com" .
+     ((query-user-repo . h--query-github-owner-repo)
+      (url . "https?://github.com/.*")))
+    ("GitLab.com" .
+     ((query-user-repo . (lambda (owner repo cb) (h--query-gitlab-owner-repo "gitlab.com" owner repo cb))))))
 
   "Fetchers meant to be used in conjunction with ‘h-forge-fetchers’.
 
@@ -202,33 +204,6 @@ Returns nil if the repo does not exists."
 ;;    (format "%s/api/v1/repos/%s/%s" instance-url user-name repo-name)
 ;;    (lambda (&rest _rest) (funcall callback (h--fetch-gitea-parse-response(current-buffer))))))
 ;; ; Get /repos/owner/repo
-
-
-;;; Gitlab Fetcher
-
-;; (defun h--query-gitlab (instance-url user-name repo-name callback)
-;;   "Queries the INSTANCE-URL gitlab instance to retrieve a repo informations.
-;; This function will first try to dertermine whether the
-;; USER-NAME/REPO-NAME exists.
-
-;; If so, calls the CALLBACK function with a alist containing the ssh and
-;; https clone URLs. If the repo does not exists, calls the callback with
-;; nil as parameter."
-;;   (url-retrieve
-;;    (format "%s/api/v4/users/%s/projects" instance-url user-name)
-;;    (lambda (&rest _rest) (funcall callback nil))))
-;; ;1. Find project in
-;https://gitlab.com/api/v4/users/ninjatrappeur/projects
-
-;;; Generic fetcher infrastructure
-
-;; (defun h--dispatch-fetcher (query-string)
-;;   "Try to download QUERY-STRING via the fetchers registered in ‘h-forge-fetchers’."
-;;   (cond ((string-match-p "github.com" query-string)
-;;          (apply 'h--query-github (h--parse-query-string-for-forge query-string)))
-;;         ;; ((string-match-p "gitlab.com" query-string)
-;;         ;;  (apply 'h--query-gitlab (h--parse-query-string-for-forge query-string)))
-;;          (t (error (format "No fetcher for %s" query-string)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Internal: repo URI parser
