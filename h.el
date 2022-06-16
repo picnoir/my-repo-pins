@@ -115,6 +115,38 @@ A ongoing/failed lookup will also be represented by an entry in this alist:
   (make-mutex "h-ui-mutex")
   "Mutex in charge of preventing several fetchers to update the state concurently.")
 
+;;; Gitlab Fetcher
+(defun h--query-gitlab-owner-repo (instance-url user-name repo-name callback)
+  "Queries the INSTANCE-URL Gitlab instance and retrieve some infos about a repo.
+
+This function will try to determine whether or not the
+USER-NAME/REPO-NAME repository exists in the INSTANCE-URL Gitlab
+instance.
+
+If so, calls the CALLBACK function with a alist containing the ssh and
+https clone URLs. If the repo does not exists, calls the callback with
+nil as parameter.
+
+Note: the gitlab GraphQL API is not accessible without a bearing
+token, the gitlab REST API doesn't provide a endpoint to retrieve the
+clone URL of a repository. Meaning instead of using an API, we make a
+HEAD request to the repository HTTP endpoint and infer by ourselves
+the clone URLs. It might go south at some point, but that's sadly the
+only option we have for now."
+  (progn
+    (setq url-request-method "HEAD")
+    (url-retrieve
+     (format "https://%s/%s/%s" instance-url user-name repo-name)
+     (lambda (status &rest _rest)
+       (let ((repo-not-found (plist-get status :error)))
+         (if repo-not-found
+             (funcall callback nil)
+           (funcall
+            callback
+            `((ssh . ,(format "git@%s:%s/%s.git" instance-url user-name repo-name))
+              (https . ,(format "https://%s/%s/%s.git" instance-url user-name repo-name))))))))
+    (setq url-request-method nil)))
+
 ;;; Github Fetcher
 (defun h--query-github-owner-repo (user-name repo-name callback)
   "Queries the GitHub API to retrieve some infos about a GitHub repo.
@@ -140,7 +172,6 @@ If the repo does exists, returns a alist in the form of:
 `(
   (ssh . SSH-CHECKOUT-URL)
   (https . HTTPS-CHECKOUT-URL)
-  (forge-str . \"Github\")
 )
 
 Returns nil if the repo does not exists."
