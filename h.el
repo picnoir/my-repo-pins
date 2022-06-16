@@ -79,7 +79,9 @@ Errors out if we can't find it."
      ((query-user-repo . h--query-github-owner-repo)
       (url . "https?://github.com/.*")))
     ("GitLab.com" .
-     ((query-user-repo . (lambda (owner repo cb) (h--query-gitlab-owner-repo "gitlab.com" owner repo cb))))))
+     ((query-user-repo . (lambda (owner repo cb) (h--query-gitlab-owner-repo "gitlab.com" owner repo cb)))))
+    ("git.sr.ht" .
+     ((query-user-repo . (lambda (owner repo cb) (h--query-sourcehut-owner-repo "git.sr.ht" owner repo cb))))))
 
   "Fetchers meant to be used in conjunction with ‘h-forge-fetchers’.
 
