@@ -117,6 +117,37 @@ A ongoing/failed lookup will also be represented by an entry in this alist:
   (make-mutex "h-ui-mutex")
   "Mutex in charge of preventing several fetchers to update the state concurently.")
 
+;;; Sourcehut Fetcher
+(defun h--query-sourcehut-owner-repo (instance-url user-name repo-name callback)
+  "Query the INSTANCE-URL Sourcehut instance and retrieve some infos about a repo.
+
+This function will try to determine whether or not the
+USER-NAME/REPO-NAME repository exists in the INSTANCE-URL sourcehut
+instance.
+
+If so, calls the CALLBACK function with a alist containing the ssh and
+https clone URLs. If the repo does not exists, calls the callback with
+nil as parameter.
+
+Note: the sourcehut GraphQL API isn't currently accessible without a
+authentication token. We can't really afford to ask the user to
+manually generate such a token for this plugin. We want it to work out
+of the box. Meaning, instead of using the API, we query the webapp
+using a HEAD request and infer the clone links from there."
+  (progn
+    (setq url-request-method "HEAD")
+    (url-retrieve
+     (format "https://%s/~%s/%s" instance-url user-name repo-name)
+     (lambda (status &rest _rest)
+       (let ((repo-not-found (plist-get status :error)))
+         (if repo-not-found
+             (funcall callback nil)
+           (funcall
+            callback
+            `((ssh . ,(format "git@%s:~%s/%s" instance-url user-name repo-name))
+              (https . ,(format "https://%s/~%s/%s" instance-url user-name repo-name))))))))
+    (setq url-request-method nil)))
+
 ;;; Gitlab Fetcher
 (defun h--query-gitlab-owner-repo (instance-url user-name repo-name callback)
   "Queries the INSTANCE-URL Gitlab instance and retrieve some infos about a repo.
