@@ -46,10 +46,20 @@ The directory gets deleted once we exit FUNC."
   "Create a dummy git repo at DIR.
 
 If DIR doesn't exists, we create it first."
-  (let ((d (file-name-as-directory dir)))
+  (let* ((d (file-name-as-directory dir))
+         (exit-code 0)
+         (git-process
+          (progn
+            (make-directory d t)
+            (h--call-git-in-dir d
+                                (lambda (ec) (setq exit-code ec))
+                                "init"))))
     (progn
-       (unless (file-directory-p d) (make-directory d t))
-       (h--call-git-in-dir d "init"))))
+      (unless (file-directory-p d) (make-directory d t))
+      ;; ERT does not handle async processes gracefully for the time
+      ;; being. Blocking and waiting for the git process to exit
+      ;; before moving on.
+      (while (accept-process-output git-process)))))
 
 ;; Test Dirs Setup
 ;;;;;;;;;;;;;;;;;
@@ -73,10 +83,10 @@ For reference: test-root-1 looks like this:
   (h--tests-with-temp-dir
    (lambda (temp-dir)
      (progn
-       (h--tests-init-fake-git-repo (concat temp-dir "/example1.tld/user1/proj1"))
-       (h--tests-init-fake-git-repo (concat temp-dir "/example1.tld/user1/proj2"))
-       (h--tests-init-fake-git-repo (concat temp-dir "/example1.tld/user2/proj1"))
-       (h--tests-init-fake-git-repo (concat temp-dir "/example2.tld/user1/proj1"))
+       (h--tests-init-fake-git-repo (concat temp-dir "example1.tld/user1/proj1"))
+       (h--tests-init-fake-git-repo (concat temp-dir "example1.tld/user1/proj2"))
+       (h--tests-init-fake-git-repo (concat temp-dir "example1.tld/user2/proj1"))
+       (h--tests-init-fake-git-repo (concat temp-dir "example2.tld/user1/proj1"))
        (funcall func temp-dir)
        ))))
 
@@ -99,10 +109,10 @@ For reference: test-root-2 looks like this:
   (h--tests-with-temp-dir
    (lambda (temp-dir)
      (progn
-       (h--tests-init-fake-git-repo (concat temp-dir "/example1.tld/user1/proj1"))
-       (make-directory (concat (file-name-as-directory temp-dir) "/example1.tld/user1/proj2"))
-       (h--tests-init-fake-git-repo (concat temp-dir "/example1.tld/user2/proj1"))
-       (h--tests-init-fake-git-repo (concat temp-dir "/example2.tld/user1/proj1"))
+       (h--tests-init-fake-git-repo (concat temp-dir "example1.tld/user1/proj1"))
+       (make-directory (concat (file-name-as-directory temp-dir) "example1.tld/user1/proj2"))
+       (h--tests-init-fake-git-repo (concat temp-dir "example1.tld/user2/proj1"))
+       (h--tests-init-fake-git-repo (concat temp-dir "example2.tld/user1/proj1"))
        (funcall func temp-dir)))))
 
 
@@ -269,12 +279,13 @@ For reference: a empty test root looks like this:
   "Test the h--git-clone-in-dir function."
     (h--tests-run-on-testroot-1
      (lambda (dir)
-       (let
-           ((tmpdir (make-temp-file "h-test-" t)))
+       (let*
+           ((tmpdir (make-temp-file "h-test-" t))
+            (git-process (h--git-clone-in-dir
+                          (format "file://%s" (concat dir "example1.tld/user1/proj1/"))
+                          tmpdir)))
          (progn
-           (h--git-clone-in-dir
-            (format "file://%s" (concat dir "example1.tld/user1/proj1/"))
-            tmpdir)
+           (while (accept-process-output git-process))
            (should (file-exists-p (format "%s/.git" tmpdir)))
            (delete-directory tmpdir t))))))
 
@@ -321,8 +332,7 @@ For reference: a empty test root looks like this:
              (h--add-keys-to-forge-status dummy-forge-query-status-one-result)))
     (should (equal
              expected-forge-query-status-with-keys-two-results
-             (h--add-keys-to-forge-status dummy-forge-query-status-two-results)))
-    ))
+             (h--add-keys-to-forge-status dummy-forge-query-status-two-results)))))
 
 (provide 'h-tests)
 ;;; h-tests.el ends here

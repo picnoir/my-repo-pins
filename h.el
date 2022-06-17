@@ -60,14 +60,49 @@ Errors out if we can't find it."
           git-from-bin-path
           (error "Can't find git. Is h-git-bin correctly set?")))))
 
-(defun h--call-git-in-dir (dir &rest args)
-  "Call the git binary as pointed by ‘h-git-bin’ in DIR with ARGS."
-  (let ((default-directory dir))
-    (apply 'process-file (seq-concatenate 'list `(,(h--git-path) nil "*h git log*" nil) args))))
+(defun h--call-git-in-dir (dir &optional callback &rest args)
+  "Call the git binary as pointed by ‘h-git-bin’ in DIR with ARGS.
 
-(defun h--git-clone-in-dir (clone-url checkout-filepath)
-  "Clone the CLONE-URL repo at CHECKOUT-FILEPATH."
-  (h--call-git-in-dir "~/" "clone" clone-url checkout-filepath))
+Once the git subprocess exists, call CALLBACK with a the process exit
+code as single argument. If CALLBACK is set to nil, don't call any
+callback.
+
+Returns the git PROCESS object."
+  (let* ((git-buffer (get-buffer-create "*h git log*"))
+        (git-window nil)
+        (current-buffer (current-buffer))
+        (git-sentinel (lambda
+                        (process event)
+                        (if (and
+                             (equal event "finished\n")
+                             (not (eq callback nil)))
+                            (let ((exit-code (process-exit-status process)))
+                              (progn
+                                (if (window-valid-p git-window)
+                                    (delete-window git-window))
+                                (funcall callback exit-code)))
+                          (if (or (equal event "deleted\n") (equal event "killed\n"))
+                              (progn
+                                (delete-window git-window))
+                            (message event))))))
+      (progn
+        (set-buffer git-buffer)
+        (erase-buffer)
+        (setq default-directory dir)
+        (setq git-window (display-buffer git-buffer))
+        (prog1
+            (make-process
+             :name "h-git-subprocess"
+             :buffer git-buffer
+             :command (seq-concatenate 'list `(,(h--git-path)) args)
+             :sentinel git-sentinel)
+          (set-buffer current-buffer)))))
+
+(defun h--git-clone-in-dir (clone-url checkout-filepath &optional callback)
+  "Clone the CLONE-URL repo at CHECKOUT-FILEPATH.
+
+Call CALLBACK with no arguments once the git subprocess exists."
+  (h--call-git-in-dir "~/" callback "clone" clone-url checkout-filepath))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Internal: builtin fetchers
@@ -588,21 +623,33 @@ url."
        (ssh-url (alist-get 'ssh forge-result-status))
        (http-url (alist-get 'https forge-result-status))
        (code-root (h--safe-get-code-root))
-       (dest-dir (concat code-root (h--filepath-from-clone-url http-url)))
-       (clone-exit-code 1))
+       (dest-dir (concat code-root (h--filepath-from-clone-url http-url))))
     (progn
       (message (format "Cloning %s to %s" ssh-url dest-dir))
-      (setq clone-exit-code (h--git-clone-in-dir ssh-url dest-dir))
-      (if (not (equal clone-exit-code 0))
-          (progn
-            (message (format "Failed to clone %s" ssh-url))
-            (message (format "Trying again with %s" http-url))
-            (setq clone-exit-code(h--git-clone-in-dir http-url dest-dir))))
-      (if (equal clone-exit-code 0)
-          (progn
-            (message (format "Successfully cloned %s" dest-dir))
-            (find-file dest-dir))
-        (error (format "Cannot clone %s nor %s." ssh-url http-url))))))
+      (cl-flet*
+          ((clone-http
+            ()
+            (h--git-clone-in-dir
+                  http-url
+                  dest-dir
+                  (lambda (exit-code)
+                    (if (not (equal exit-code 0))
+                         (error (format "Cannot clone %s nor %s." ssh-url http-url))
+                       (message (format "Successfully cloned %s" dest-dir))))))
+           (clone-ssh
+            ()
+            (h--git-clone-in-dir
+                  ssh-url
+                  dest-dir
+                  (lambda (exit-code)
+                    (if (not (equal exit-code 0))
+                         (progn
+                           (message (format "Failed to clone %s" ssh-url))
+                           (message (format "Trying again with %s" http-url))
+                           (clone-http))
+              (message (format "Successfully cloned %s" dest-dir)))))))
+        (clone-ssh)))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Internal: improving builtin autocomplete
@@ -670,8 +717,13 @@ TODO: split that mess before release. We shouldn't query here."
           ((code-root (h--safe-get-code-root))
            (dest-dir (concat code-root (h--filepath-from-clone-url repo-query))))
         (progn
-          (h--git-clone-in-dir repo-query dest-dir)
-          (find-file dest-dir))))
+          (h--git-clone-in-dir
+           repo-query
+           dest-dir
+           (lambda (exit-code)
+             (if (equal exit-code 0)
+                 (find-file dest-dir)
+               (error (format "Cannot clone %s." repo-query))))))))
     (t (error repo-query-kind)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
