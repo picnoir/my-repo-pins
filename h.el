@@ -676,6 +676,14 @@ READ-RESULT)"
 ;; Internal: Internal state management
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defun h--init-forges-state (forge-fetchers)
+  "Initialize ‘h--forge-fetchers-state’.
+
+We iterate through the forges set in FORGE-FETCHERS and associate
+each of them with a pending status. We then return this new state
+alist."
+  (seq-map (lambda (e) `(,(car e) . loading)) forge-fetchers))
+
 (defun h--update-forges-state (forge-name new-state user-query)
   "Update ‘h--forge-fetchers-state’ for FORGE-NAME with NEW-STATE.
 
@@ -735,7 +743,7 @@ TODO: split that mess before release. We shouldn't query here."
   "Clone USER-QUERY in its appropriate directory in ‘h-code-root’."
   (interactive "sGit repository to checkout: ")
   (progn
-    (setq h--forge-fetchers-state nil)
+    (setq h--forge-fetchers-state (h--init-forges-state h-forge-fetchers))
     (h--query-forge-fetchers user-query)))
 
 ;;;###autoload

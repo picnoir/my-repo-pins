@@ -289,6 +289,25 @@ For reference: a empty test root looks like this:
            (should (file-exists-p (format "%s/.git" tmpdir)))
            (delete-directory tmpdir t))))))
 
+;;; State Management tests
+
+(ert-deftest h--test-init-forges-state ()
+  "Test the h--init-forges-state function."
+  (let* ((forge-fetchers
+          '(("GitHub.com" .
+             ((query-user-repo . h--query-github-owner-repo)))
+            ("GitLab.com" .
+             ((query-user-repo . (lambda (owner repo cb) (h--query-gitlab-owner-repo "gitlab.com" owner repo cb)))))
+            ("git.sr.ht" .
+             ((query-user-repo . (lambda (owner repo cb) (h--query-sourcehut-owner-repo "git.sr.ht" owner repo cb)))))
+            ("Codeberg.org" .
+             ((query-user-repo . (lambda (owner repo cb) (h--query-gitea-owner-repo "codeberg.org" owner repo cb)))))))
+         (result (h--init-forges-state forge-fetchers)))
+    (should (equal (alist-get "GitHub.com" result nil nil 'equal) 'loading))
+    (should (equal (alist-get "GitLab.com" result nil nil 'equal) 'loading))
+    (should (equal (alist-get "git.sr.ht" result nil nil 'equal) 'loading))
+    (should (equal (alist-get "Codeberg.org" result nil nil 'equal) 'loading))))
+
 ;;; UI-related tests
 
 (ert-deftest h--test-add-keys-to-forge-status ()
