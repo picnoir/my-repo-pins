@@ -635,7 +635,9 @@ url."
                   (lambda (exit-code)
                     (if (not (equal exit-code 0))
                          (error (format "Cannot clone %s nor %s." ssh-url http-url))
-                       (message (format "Successfully cloned %s" dest-dir))))))
+                      (progn
+                        (message (format "Successfully cloned %s" dest-dir))
+                        (find-file dest-dir))))))
            (clone-ssh
             ()
             (h--git-clone-in-dir
@@ -647,7 +649,9 @@ url."
                            (message (format "Failed to clone %s" ssh-url))
                            (message (format "Trying again with %s" http-url))
                            (clone-http))
-              (message (format "Successfully cloned %s" dest-dir)))))))
+                      (progn
+                        (message (format "Successfully cloned %s" dest-dir))
+                        (find-file dest-dir)))))))
         (clone-ssh)))))
 
 
