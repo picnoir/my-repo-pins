@@ -1,4 +1,4 @@
-;;; h.el --- Helps you keep your git repositories organized in a single unified tree -*- lexical-binding: t -*-
+;;; h.el --- Helps you keep your git repositories organized -*- lexical-binding: t -*-
 
 ;;; Copyright (C) 2022 Félix Baylac Jacqué
 ;;; Author: Félix Baylac Jacqué <felix at alternativebit.fr>
