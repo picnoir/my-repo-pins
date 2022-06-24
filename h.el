@@ -72,19 +72,12 @@ Returns the git PROCESS object."
         (git-window nil)
         (current-buffer (current-buffer))
         (git-sentinel (lambda
-                        (process event)
-                        (if (and
-                             (equal event "finished\n")
-                             (not (eq callback nil)))
-                            (let ((exit-code (process-exit-status process)))
-                              (progn
-                                (if (window-valid-p git-window)
-                                    (delete-window git-window))
-                                (funcall callback exit-code)))
-                          (if (or (equal event "deleted\n") (equal event "killed\n"))
-                              (progn
+                        (process _event)
+                        (let ((exit-code (process-exit-status process)))
+                          (progn
+                            (if (window-valid-p git-window)
                                 (delete-window git-window))
-                            (message event))))))
+                            (funcall callback exit-code))))))
       (progn
         (set-buffer git-buffer)
         (erase-buffer)
