@@ -1,30 +1,77 @@
-;;; h.el --- Project navigation and remote checkout -*- lexical-binding: t -*-
+;;; h.el --- Helps you keep your git repositories organized in a single unified tree -*- lexical-binding: t -*-
 
 ;;; Copyright (C) 2022 Félix Baylac Jacqué
 ;;; Author: Félix Baylac Jacqué <felix at alternativebit.fr>
 ;;; Maintainer: Félix Baylac Jacqué <felix at alternativebit.fr>
-;;; Version: 1.14.0
-;;; Homepage: https://alternativebit.fr/TODO
+;;; Version: 0.1
+;;; Homepage: https://github.com/NinjaTrappeur/h.el
 ;;; Package-Requires: ((emacs "26.1"))
-
 ;;; License:
-
+;;;
 ;;; This program is free software; you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published by
 ;;; the Free Software Foundation, either version 3 of the License, or
 ;;; (at your option) any later version.
-
+;;;
 ;;; This program is distributed in the hope that it will be useful,
 ;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ;;; GNU General Public License for more details.
-
+;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with this program.  If not, see <https://www.gnu.org/licenses/>
-
-;;;; Commentary:
-
-;;; TODO before publish
+;;;
+;;; Commentary:
+;;; This plugin one and only goal is to help you keep your git
+;;; repositories organized in a single unified tree.
+;;;
+;;; The general idea is to organize the repositories by reflecting
+;;; their remote clone URLs.
+;;;
+;;; IE., having a directory structure like that:
+;;;
+;;; ~/code-root
+;;; ├── codeberg.org
+;;; │   └── Freeyourgadget
+;;; │       └── Gadgetbridge
+;;; └── github.com
+;;;     ├── BaseAdresseNationale
+;;;     │   └── fantoir
+;;;     ├── mpv-player
+;;;     │   └── mpv
+;;;     └── NinjaTrappeur
+;;;         ├── cinny
+;;;         └── h.el
+;;;
+;;; The main entry point of this package is the h-jump-to-project
+;;; command. Using it, you can either:
+;;;
+;;; - Open dired in a local project you already cloned.
+;;; - Query remote forges for a repository, clone it, and finally open
+;;;   dired in the clone directory.
+;;; - Clone a git clone URL and open dired to the right directory.
+;;;
+;;; The minimal configuration consists in setting the directory in
+;;; which you want to clone all your git repositories via the
+;;; h-code-root variable.
+;;;
+;;; Let's say you'd like to store all your git repositories in the
+;;; ~/code-root directory. You'll want to add the following snippet in
+;;; your Emacs configuration file:
+;;;
+;;;    (require 'h)
+;;;    (setq h-code-root "~/code-root")
+;;;
+;;; You can then call the M-x h-jump-to-project command to open a
+;;; project living in your ~/code-root directory or clone a new
+;;; project in your code root.
+;;;
+;;; Binding this command to a global key binding might make things a
+;;; bit more convenient. I personally like to bind it to M-h. You can
+;;; add the following snippet to your Emacs configuration to set up
+;;; this key binding:
+;;;
+;;;    (global-set-key (kbd "M-h") 'h-jump-to-project)
 
 ;;; Code:
 
@@ -429,7 +476,7 @@ git repository, it'll automatically be considered as a project root.
 It means that after encountering a git repository, we won't recurse
 any further.
 
-If the directory pointed by h-code-root does not exists yet, returns
+If the directory pointed by ‘h-code-root’ does not exists yet, returns
 an empty list."
   (if (not (file-directory-p code-root))
       '()
@@ -450,8 +497,8 @@ an empty list."
 (defun h--evil-safe-binding (kbd action)
   "Bind ACTION to the KBD keyboard key.
 
-This key binding will be bound to the current buffer. If evil-mode is
-used, the key binding will be bound to the normal mode as well."
+This key binding will be bound to the current buffer. If ‘evil-mode’
+is used, the key binding will be bound to the normal mode as well."
   (let ((evil-mode-enabled (member 'evil-mode minor-mode-list)))
     (if evil-mode-enabled
         (progn
