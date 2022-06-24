@@ -35,6 +35,9 @@ As always, a small demo is worth a thousand words!
 
 ![Screen capture showcasing h.el cloning a git repository from a remote forge before jumping to it](./doc/assets/clone-project.webp)
 
+**Alternatively, you can also specify a absolute git URL you want to clone:**
+
+![Screen capture showcasing h.el cloning a git repository using a absolute git url before jumping to it](./doc/assets/clone-absolute-url.webp)
 
 This plugin is heavily inspired by [**Zimbatm's h**](https://github.com/zimbatm/h).
 
