@@ -124,7 +124,8 @@ Returns the git PROCESS object."
                           (progn
                             (if (window-valid-p git-window)
                                 (delete-window git-window))
-                            (funcall callback exit-code))))))
+                            (if callback
+                                (funcall callback exit-code)))))))
       (progn
         (set-buffer git-buffer)
         (erase-buffer)
