@@ -47,12 +47,11 @@ The directory gets deleted once we exit FUNC."
 
 If DIR doesn't exists, we create it first."
   (let* ((d (file-name-as-directory dir))
-         (exit-code 0)
          (git-process
           (progn
             (make-directory d t)
             (h--call-git-in-dir d
-                                (lambda (ec) (setq exit-code ec))
+                                nil
                                 "init"))))
     (progn
       (unless (file-directory-p d) (make-directory d t))
