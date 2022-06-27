@@ -1,10 +1,10 @@
-;;; h.el --- Helps you keep your git repositories organized -*- lexical-binding: t -*-
+;;; my-repo-pins.el --- Helps you keep your git repositories organized -*- lexical-binding: t -*-
 
 ;;; Copyright (C) 2022 Félix Baylac Jacqué
 ;;; Author: Félix Baylac Jacqué <felix at alternativebit.fr>
 ;;; Maintainer: Félix Baylac Jacqué <felix at alternativebit.fr>
 ;;; Version: 0.1
-;;; Homepage: https://github.com/NinjaTrappeur/h.el
+;;; Homepage: https://github.com/NinjaTrappeur/my-repo-pins.el
 ;;; Package-Requires: ((emacs "26.1"))
 ;;; License:
 ;;;
@@ -41,10 +41,10 @@
 ;;;     │   └── mpv
 ;;;     └── NinjaTrappeur
 ;;;         ├── cinny
-;;;         └── h.el
+;;;         └── my-repo-pins.el
 ;;;
-;;; The main entry point of this package is the h-jump-to-project
-;;; command. Using it, you can either:
+;;; The main entry point of this package is the my-repo-pins command.
+;;; Using it, you can either:
 ;;;
 ;;; - Open dired in a local project you already cloned.
 ;;; - Query remote forges for a repository, clone it, and finally open
@@ -53,16 +53,16 @@
 ;;;
 ;;; The minimal configuration consists in setting the directory in
 ;;; which you want to clone all your git repositories via the
-;;; h-code-root variable.
+;;; my-repo-pins-code-root variable.
 ;;;
 ;;; Let's say you'd like to store all your git repositories in the
 ;;; ~/code-root directory. You'll want to add the following snippet in
 ;;; your Emacs configuration file:
 ;;;
-;;;    (require 'h)
-;;;    (setq h-code-root "~/code-root")
+;;;    (require 'my-repo-pins)
+;;;    (setq my-repo-pins-code-root "~/code-root")
 ;;;
-;;; You can then call the M-x h-jump-to-project command to open a
+;;; You can then call the M-x my-repo-pins command to open a
 ;;; project living in your ~/code-root directory or clone a new
 ;;; project in your code root.
 ;;;
@@ -71,7 +71,7 @@
 ;;; add the following snippet to your Emacs configuration to set up
 ;;; this key binding:
 ;;;
-;;;    (global-set-key (kbd "M-h") 'h-jump-to-project)
+;;;    (global-set-key (kbd "M-h") 'my-repo-pins)
 
 ;;; Code:
 
@@ -82,40 +82,40 @@
 ;; loaded by default in interactive emacs, not in batch-mode emacs.
 (eval-when-compile (require 'subr-x))
 
-(defgroup h-group nil
-  "Variables used to setup the h.el project manager."
+(defgroup my-repo-pins-group nil
+  "Variables used to setup the my-repo-pins.el project manager."
   :group 'Communication)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Internal: git primitives
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defcustom h-git-bin "git"
+(defcustom my-repo-pins-git-bin "git"
   "Path pointing to the git binary.
 By default, it'll look for git in the current $PATH."
   :type 'file
-  :group 'h-group)
+  :group 'my-repo-pins-group)
 
-(defun h--git-path ()
-  "Find the git binary path using ‘h-git-bin’.
+(defun my-repo-pins--git-path ()
+  "Find the git binary path using ‘my-repo-pins-git-bin’.
 
 Errors out if we can't find it."
-  (if (file-executable-p h-git-bin)
-      h-git-bin
-    (let ((git-from-bin-path (locate-file h-git-bin exec-path)))
+  (if (file-executable-p my-repo-pins-git-bin)
+      my-repo-pins-git-bin
+    (let ((git-from-bin-path (locate-file my-repo-pins-git-bin exec-path)))
       (if (file-executable-p git-from-bin-path)
           git-from-bin-path
-          (error "Can't find git. Is h-git-bin correctly set?")))))
+          (error "Can't find git. Is my-repo-pins-git-bin correctly set?")))))
 
-(defun h--call-git-in-dir (dir &optional callback &rest args)
-  "Call the git binary as pointed by ‘h-git-bin’ in DIR with ARGS.
+(defun my-repo-pins--call-git-in-dir (dir &optional callback &rest args)
+  "Call the git binary as pointed by ‘my-repo-pins-git-bin’ in DIR with ARGS.
 
 Once the git subprocess exists, call CALLBACK with a the process exit
 code as single argument. If CALLBACK is set to nil, don't call any
 callback.
 
 Returns the git PROCESS object."
-  (let* ((git-buffer (get-buffer-create "*h git log*"))
+  (let* ((git-buffer (get-buffer-create "*my repo pins git log*"))
         (git-window nil)
         (current-buffer (current-buffer))
         (git-sentinel (lambda
@@ -133,49 +133,49 @@ Returns the git PROCESS object."
         (setq git-window (display-buffer git-buffer))
         (prog1
             (make-process
-             :name "h-git-subprocess"
+             :name "my-repo-pins-git-subprocess"
              :buffer git-buffer
-             :command (seq-concatenate 'list `(,(h--git-path)) args)
+             :command (seq-concatenate 'list `(,(my-repo-pins--git-path)) args)
              :sentinel git-sentinel)
           (set-buffer current-buffer)))))
 
-(defun h--git-clone-in-dir (clone-url checkout-filepath &optional callback)
+(defun my-repo-pins--git-clone-in-dir (clone-url checkout-filepath &optional callback)
   "Clone the CLONE-URL repo at CHECKOUT-FILEPATH.
 
 Call CALLBACK with no arguments once the git subprocess exists."
-  (h--call-git-in-dir "~/" callback "clone" clone-url checkout-filepath))
+  (my-repo-pins--call-git-in-dir "~/" callback "clone" clone-url checkout-filepath))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Internal: builtin fetchers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;;; Generic fetcher infrastructure
-(defvar h--builtins-forge-fetchers
+(defvar my-repo-pins--builtins-forge-fetchers
   '(("GitHub.com" .
-     ((query-user-repo . h--query-github-owner-repo)))
+     ((query-user-repo . my-repo-pins--query-github-owner-repo)))
     ("GitLab.com" .
-     ((query-user-repo . (lambda (owner repo cb) (h--query-gitlab-owner-repo "gitlab.com" owner repo cb)))))
+     ((query-user-repo . (lambda (owner repo cb) (my-repo-pins--query-gitlab-owner-repo "gitlab.com" owner repo cb)))))
     ("git.sr.ht" .
-     ((query-user-repo . (lambda (owner repo cb) (h--query-sourcehut-owner-repo "git.sr.ht" owner repo cb)))))
+     ((query-user-repo . (lambda (owner repo cb) (my-repo-pins--query-sourcehut-owner-repo "git.sr.ht" owner repo cb)))))
     ("Codeberg.org" .
-     ((query-user-repo . (lambda (owner repo cb) (h--query-gitea-owner-repo "codeberg.org" owner repo cb))))))
+     ((query-user-repo . (lambda (owner repo cb) (my-repo-pins--query-gitea-owner-repo "codeberg.org" owner repo cb))))))
 
-  "Fetchers meant to be used in conjunction with ‘h-forge-fetchers’.
+  "Fetchers meant to be used in conjunction with ‘my-repo-pins-forge-fetchers’.
 
 This variable contains fetchers for:
 - github.com")
 
-(defcustom h-forge-fetchers
-  h--builtins-forge-fetchers
+(defcustom my-repo-pins-forge-fetchers
+  my-repo-pins--builtins-forge-fetchers
   "List of forges for which we want to remote fetch projects."
   :type '(alist
           :key-type symbol
           :value-type (alist
                         :key-type symbol
                         :value-type (choice function string)))
-  :group 'h-group)
+  :group 'my-repo-pins-group)
 
-(defvar h--forge-fetchers-state '()
+(defvar my-repo-pins--forge-fetchers-state '()
 
   "Internal state where we keep a forge request status.
 
@@ -192,12 +192,12 @@ A ongoing/failed lookup will also be represented by an entry in this alist:
 \(\"FORGE-NAME1\" . 'loading)
 \(\"FORGE-NAME1\" . 'not-found)")
 
-(defvar h--forge-fetchers-state-mutex
-  (make-mutex "h-ui-mutex")
+(defvar my-repo-pins--forge-fetchers-state-mutex
+  (make-mutex "my-repo-pins-ui-mutex")
   "Mutex in charge of preventing several fetchers to update the state concurently.")
 
 ;;; Sourcehut Fetcher
-(defun h--query-sourcehut-owner-repo (instance-url user-name repo-name callback)
+(defun my-repo-pins--query-sourcehut-owner-repo (instance-url user-name repo-name callback)
   "Query the INSTANCE-URL Sourcehut instance and retrieve some infos about a repo.
 
 This function will try to determine whether or not the
@@ -228,7 +228,7 @@ using a HEAD request and infer the clone links from there."
     (setq url-request-method nil)))
 
 ;;; Gitlab Fetcher
-(defun h--query-gitlab-owner-repo (instance-url user-name repo-name callback)
+(defun my-repo-pins--query-gitlab-owner-repo (instance-url user-name repo-name callback)
   "Queries the INSTANCE-URL Gitlab instance and retrieve some infos about a repo.
 
 This function will try to determine whether or not the
@@ -260,7 +260,7 @@ only option we have for now."
     (setq url-request-method nil)))
 
 ;;; Github Fetcher
-(defun h--query-github-owner-repo (user-name repo-name callback)
+(defun my-repo-pins--query-github-owner-repo (user-name repo-name callback)
   "Queries the GitHub API to retrieve some infos about a GitHub repo.
 This function will first try to determine whether
 github.com/USER-NAME/REPO-NAME exists.
@@ -271,10 +271,10 @@ nil as parameter."
   (progn
     (url-retrieve
      (format "https://api.github.com/repos/%s/%s" user-name repo-name)
-     (lambda (&rest _rest) (funcall callback (h--fetch-github-parse-response(current-buffer)))))))
+     (lambda (&rest _rest) (funcall callback (my-repo-pins--fetch-github-parse-response(current-buffer)))))))
 
 
-(defun h--fetch-github-parse-response (response-buffer)
+(defun my-repo-pins--fetch-github-parse-response (response-buffer)
   "Parse the RESPONSE-BUFFER containing a GET response from the GitHub API.
 
 Parsing a response from a GET https://api.github.com/repos/user/repo request.
@@ -302,7 +302,7 @@ Returns nil if the repo does not exists."
            nil)))
 
 ;;; Gitea Fetcher
-(defun h--query-gitea-owner-repo (instance-url user-name repo-name callback)
+(defun my-repo-pins--query-gitea-owner-repo (instance-url user-name repo-name callback)
   "Queries the INSTANCE-URL gitea instance to retrieve a repo informations.
 This function will first try to dertermine whether the
 USER-NAME/REPO-NAME exists.
@@ -312,9 +312,9 @@ https clone URLs. If the repo does not exists, calls the callback with
 nil as parameter."
   (url-retrieve
    (format "https://%s/api/v1/repos/%s/%s" instance-url user-name repo-name)
-   (lambda (&rest _rest) (funcall callback (h--fetch-gitea-parse-response(current-buffer))))))
+   (lambda (&rest _rest) (funcall callback (my-repo-pins--fetch-gitea-parse-response(current-buffer))))))
 
-(defun h--fetch-gitea-parse-response (response-buffer)
+(defun my-repo-pins--fetch-gitea-parse-response (response-buffer)
   "Parse the RESPONSE-BUFFER containing a GET response from the Gitea API.
 
 Parsing a response from a GET https://instance/api/v1/repos/user/repo request.
@@ -345,7 +345,7 @@ Returns nil if the repo does not exists."
 ;; Internal: repo URI parser
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun h--parse-repo-identifier (query-str)
+(defun my-repo-pins--parse-repo-identifier (query-str)
   "Do its best to figure out which repo the user meant by QUERY-STR.
 
 A valid QUERY-STR is in one of the 4 following formats:
@@ -368,9 +368,9 @@ each kind of format, it'll return something along the line of:
 \"https://full-url.org/path/to/git/repo/checkout\"))
 or
 \(('tag . 'owner-repo) ('owner . \"NinjaTrappeur\") ('repo\
-. \"h.el\"))
+. \"my-repo-pins.el\"))
 or
-\(('tag . 'repo) ('repo . \"h.el\"))"
+\(('tag . 'repo) ('repo . \"my-repo-pins.el\"))"
   (cond
    ;; Full-url case
    ((or (string-match "^https?://.*/.*/.*$" query-str)
@@ -386,7 +386,7 @@ or
    ;; repo case
    (t `((tag . repo) (repo . ,query-str)))))
 
-(defun h--filepath-from-clone-url (clone-url)
+(defun my-repo-pins--filepath-from-clone-url (clone-url)
   "Return the relative path relative to the coderoot for CLONE-URL.
 
 CLONE-STR being the git clone URL we want to find the local path for."
@@ -409,29 +409,30 @@ CLONE-STR being the git clone URL we want to find the local path for."
 ;; Internal: code-root management functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defcustom h-code-root nil
+(defcustom my-repo-pins-code-root nil
   "Root directory containing all your projects.
-h.el organise the git repos you'll checkout in a tree fashion.
+my-repo-pins.el organise the git repos you'll checkout in a tree
+fashion.
 
-All the code fetched using h.el will end up in this root directory. A
+All the code fetched using my-repo-pins.el will end up in this root directory. A
 tree of subdirectories will be created mirroring the remote URI.
 
 For instance, after checking out
 https://git.savannah.gnu.org/git/emacs/org-mode.git, the source code
-will live in the h-code-root/git.savannah.gnu.org/git/emacs/org-mode/
+will live in the my-repo-pins-code-root/git.savannah.gnu.org/git/emacs/org-mode/
 local directory"
   :type 'directory
-  :group 'h-group)
+  :group 'my-repo-pins-group)
 
-(defun h--safe-get-code-root ()
-    "Ensure ‘h-code-root’ is correctly set, then canonalize the path.
-Errors out if ‘h-code-root’ has not been set yet."
-    (progn (when (not h-code-root)
-             (error "h-code-root has not been set. Please point it to your code root"))
-           (expand-file-name (file-name-as-directory h-code-root))))
+(defun my-repo-pins--safe-get-code-root ()
+    "Ensure ‘my-repo-pins-code-root’ is correctly set, then canonalize the path.
+Errors out if ‘my-repo-pins-code-root’ has not been set yet."
+    (progn (when (not my-repo-pins-code-root)
+             (error "My-Repo-Pins-code-root has not been set. Please point it to your code root"))
+           (expand-file-name (file-name-as-directory my-repo-pins-code-root))))
 
 
-(defun h--find-git-dirs-recursively (dir)
+(defun my-repo-pins--find-git-dirs-recursively (dir)
   "Vendored, slightly modified version of ‘directory-files-recursively’.
 
 This library isn't available for Emacs > 25.1. Vendoring it for
@@ -464,21 +465,22 @@ included."
                   ;; It's not a git repo, let's recurse into it.
                   (setq recur-result
                         (nconc recur-result
-                               (h--find-git-dirs-recursively full-file)))))))))
+                               (my-repo-pins--find-git-dirs-recursively full-file)))))))))
    (nconc recur-result (nreverse projects))))
 
 
-(defun h--get-code-root-projects (code-root)
+(defun my-repo-pins--get-code-root-projects (code-root)
   "Retrieve the projects contained in the CODE-ROOT directory.
-We're going to make some hard assumptions about how the ‘h-code-root’
-directory should look like. First of all, if a directory seem to be a
-git repository, it'll automatically be considered as a project root.
+We're going to make some hard assumptions about how the
+‘my-repo-pins-code-root’ directory should look like. First of all, if
+a directory seem to be a git repository, it'll automatically be
+considered as a project root.
 
 It means that after encountering a git repository, we won't recurse
 any further.
 
-If the directory pointed by ‘h-code-root’ does not exists yet, returns
-an empty list."
+If the directory pointed by ‘my-repo-pins-code-root’ does not exists
+yet, returns an empty list."
   (if (not (file-directory-p code-root))
       '()
     (let*
@@ -486,7 +488,7 @@ an empty list."
           (lambda (path)
             (let ((path-without-prefix (string-remove-prefix code-root path)))
                 (substring path-without-prefix 0 (1- (length path-without-prefix))))))
-         (projects-absolute-path (h--find-git-dirs-recursively code-root))
+         (projects-absolute-path (my-repo-pins--find-git-dirs-recursively code-root))
          (projects-relative-to-code-root
           (mapcar remove-code-root-prefix-and-trailing-slash projects-absolute-path)))
       projects-relative-to-code-root)))
@@ -495,7 +497,7 @@ an empty list."
 ;; Internal: UI
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun h--evil-safe-binding (kbd action)
+(defun my-repo-pins--evil-safe-binding (kbd action)
   "Bind ACTION to the KBD keyboard key.
 
 This key binding will be bound to the current buffer. If ‘evil-mode’
@@ -520,7 +522,7 @@ is used, the key binding will be bound to the normal mode as well."
             (eval `(evil-local-set-key 'normal ,kbd ',action))))
       (local-set-key kbd action))))
 
-(defun h--draw-ui-buffer (forge-query-status user-query)
+(defun my-repo-pins--draw-ui-buffer (forge-query-status user-query)
   "Draws the UI depending on the app state.
 
 FORGE-QUERY-STATUS being a alist in the form of (FORGE-NAME . LOOKUP-STATUS)
@@ -534,34 +536,34 @@ to clone for.
 We're going to draw these forge query status results in a buffer and
 associate each of them with a key binding.
 
-, ‘h--draw-forge-status’ is in charge of
-drawing the forge status in the h.el buffer."
+, ‘my-repo-pins--draw-forge-status’ is in charge of
+drawing the forge status in the my-repo-pins.el buffer."
   (let* (
-        (h-buffer (get-buffer-create "h.el"))
-        (h-window nil)
+        (my-repo-pins-buffer (get-buffer-create "my-repo-pins.el"))
+        (my-repo-pins-window nil)
         (previous-buffer (current-buffer))
-        (forge-status-with-keys (h--add-keys-to-forge-status forge-query-status)))
+        (forge-status-with-keys (my-repo-pins--add-keys-to-forge-status forge-query-status)))
     (progn
-      (set-buffer h-buffer)
+      (set-buffer my-repo-pins-buffer)
       (setq buffer-read-only nil)
       (erase-buffer)
       (insert (format "Looking up for %s in different forges:\n\n\n" user-query))
       (set-text-properties 1 (point) `(face (:foreground "orange" :weight bold)))
       (seq-map
-       (lambda (e) (h--draw-forge-status e)) forge-status-with-keys)
+       (lambda (e) (my-repo-pins--draw-forge-status e)) forge-status-with-keys)
       (insert "\n\nPlease select the forge we should clone the project from.\n")
       (insert "Press q to close this window.")
       (setq buffer-read-only t)
-      (h--evil-safe-binding (kbd "q")
+      (my-repo-pins--evil-safe-binding (kbd "q")
                             `(lambda () (interactive)
                                (progn
                                  (delete-window)
-                                 (kill-buffer ,h-buffer))))
+                                 (kill-buffer ,my-repo-pins-buffer))))
       (set-buffer previous-buffer)
-      (setq h-window (display-buffer h-buffer))
-      (select-window h-window))))
+      (setq my-repo-pins-window (display-buffer my-repo-pins-buffer))
+      (select-window my-repo-pins-window))))
 
-(defun h--add-keys-to-forge-status (forge-query-status)
+(defun my-repo-pins--add-keys-to-forge-status (forge-query-status)
   "Add key bindings to relevant FORGE-QUERY-STATUS entries.
 
 FORGE-QUERY-STATUS is list of alists in the form of ((FORGE-NAME .
@@ -570,7 +572,7 @@ lookup results or the 'not-found atom when no results could be found.
 This function adds a key binding alist to the LOOKUP-STATUS list when
 results have been found, nothing if the repo couldn't be found.
 
-‘h--find-next-available-key-binding’ is in charge of generating the
+‘my-repo-pins--find-next-available-key-binding’ is in charge of generating the
 key bindings."
   (reverse
    (cdr
@@ -583,7 +585,7 @@ key bindings."
               (key (car acc))
               (isFound (listp status))
               (nextKeybinding
-               (if isFound (h--find-next-available-key-binding (car acc)) (car acc)))
+               (if isFound (my-repo-pins--find-next-available-key-binding (car acc)) (car acc)))
               (forge-status-with-key
                (if isFound
                    `((status . ,status)
@@ -595,7 +597,7 @@ key bindings."
      forge-query-status
      :initial-value '(?1 . ())))))
 
-(defun h--draw-forge-status (forge-result)
+(defun my-repo-pins--draw-forge-status (forge-result)
   "Draws FORGE-RESULT status to the current buffer.
 
 FORGE-STATUS being a alist in the form of (FORGE-NAME . LOOKUP-STATUS).
@@ -611,7 +613,7 @@ https-checkout-url)) ('key . \"1\"))."
               ((eq status 'loading) (format "[?] %s (loading...)" forge-name))
               ((eq status 'not-found) (format "[X] %s" forge-name))
               ((listp status) (format "[✓] %s" forge-name))
-              (t (error (format "h--draw-forge-status: Invalid forge status %s" status)))))
+              (t (error (format "my-repo-pins--draw-forge-status: Invalid forge status %s" status)))))
        (text (if (null key)
                  (format "%s\n" status-text)
                (format "%s [%s]\n" status-text (char-to-string key))))
@@ -619,18 +621,18 @@ https-checkout-url)) ('key . \"1\"))."
                     ((eq status 'loading) "orange")
                     ((eq status 'not-found) "red")
                     ((listp status) "green")
-                    (t (error (format "h--draw-forge-status: Invalid forge status %s" status)))))
-       (h-buffer (current-buffer))
+                    (t (error (format "my-repo-pins--draw-forge-status: Invalid forge status %s" status)))))
+       (my-repo-pins-buffer (current-buffer))
        (original-point (point)))
   (progn
     (if (not (null key))
-        (h--evil-safe-binding (kbd (format "%s" (char-to-string key)))
+        (my-repo-pins--evil-safe-binding (kbd (format "%s" (char-to-string key)))
                        `(lambda ()
                          (interactive)
                          (progn
                            (delete-window)
-                           (kill-buffer ,h-buffer)
-                           (h--clone-from-forge-result ',forge-result)))))
+                           (kill-buffer ,my-repo-pins-buffer)
+                           (my-repo-pins--clone-from-forge-result ',forge-result)))))
     (insert text)
     ;; Set color for status indicator
     (set-text-properties original-point
@@ -641,8 +643,8 @@ https-checkout-url)) ('key . \"1\"))."
         (set-text-properties (- (point) 4) (point)
                              '(face (:foreground "orange" :weight bold)))))))
 
-(defun h--find-next-available-key-binding (cur-key-binding)
-  "Find a key binding starting CUR-KEY-BINDING for the h buffer.
+(defun my-repo-pins--find-next-available-key-binding (cur-key-binding)
+  "Find a key binding starting CUR-KEY-BINDING for the my-repo-pins buffer.
 
 We're using the 1-9 numbers, then, once all the numbers are already in
 use, we start allocating the a-Z letters."
@@ -650,7 +652,7 @@ use, we start allocating the a-Z letters."
         ((= cur-key-binding ?z) (error "Keys exhausted, can't bind any more"))
         (t (+ cur-key-binding 1))))
 
-(defun h--clone-from-forge-result (forge-result)
+(defun my-repo-pins--clone-from-forge-result (forge-result)
   "Clone a repository using the FORGE-RESULT alist.
 
 The FORGE-RESULT alist is in the form of (status . (https .
@@ -663,14 +665,14 @@ url."
       ((forge-result-status (alist-get 'status (cdr forge-result)))
        (ssh-url (alist-get 'ssh forge-result-status))
        (http-url (alist-get 'https forge-result-status))
-       (code-root (h--safe-get-code-root))
-       (dest-dir (concat code-root (h--filepath-from-clone-url http-url))))
+       (code-root (my-repo-pins--safe-get-code-root))
+       (dest-dir (concat code-root (my-repo-pins--filepath-from-clone-url http-url))))
     (progn
       (message (format "Cloning %s to %s" ssh-url dest-dir))
       (cl-flet*
           ((clone-http
             ()
-            (h--git-clone-in-dir
+            (my-repo-pins--git-clone-in-dir
                   http-url
                   dest-dir
                   (lambda (exit-code)
@@ -681,7 +683,7 @@ url."
                         (find-file dest-dir))))))
            (clone-ssh
             ()
-            (h--git-clone-in-dir
+            (my-repo-pins--git-clone-in-dir
                   ssh-url
                   dest-dir
                   (lambda (exit-code)
@@ -700,7 +702,7 @@ url."
 ;; Internal: improving builtin autocomplete
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun h--completing-read-or-custom (prompt collection)
+(defun my-repo-pins--completing-read-or-custom (prompt collection)
   "Behaves similarly to ‘complete-read’.
 
 See the ‘complete-read’ documentation for more details about PROMPT
@@ -721,31 +723,31 @@ READ-RESULT)"
 ;; Internal: Internal state management
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun h--init-forges-state (forge-fetchers)
-  "Initialize ‘h--forge-fetchers-state’.
+(defun my-repo-pins--init-forges-state (forge-fetchers)
+  "Initialize ‘my-repo-pins--forge-fetchers-state’.
 
 We iterate through the forges set in FORGE-FETCHERS and associate
 each of them with a pending status. We then return this new state
 alist."
   (seq-map (lambda (e) `(,(car e) . loading)) forge-fetchers))
 
-(defun h--update-forges-state (forge-name new-state user-query)
-  "Update ‘h--forge-fetchers-state’ for FORGE-NAME with NEW-STATE.
+(defun my-repo-pins--update-forges-state (forge-name new-state user-query)
+  "Update ‘my-repo-pins--forge-fetchers-state’ for FORGE-NAME with NEW-STATE.
 
 USER-QUERY was the original query for this state update."
   (progn
-    (mutex-lock h--forge-fetchers-state-mutex)
-    (setq h--forge-fetchers-state (assq-delete-all forge-name h--forge-fetchers-state))
-    (setq h--forge-fetchers-state (cons `(,forge-name . ,new-state) h--forge-fetchers-state))
-    (h--draw-ui-buffer h--forge-fetchers-state user-query)
-    (mutex-unlock h--forge-fetchers-state-mutex)))
+    (mutex-lock my-repo-pins--forge-fetchers-state-mutex)
+    (setq my-repo-pins--forge-fetchers-state (assq-delete-all forge-name my-repo-pins--forge-fetchers-state))
+    (setq my-repo-pins--forge-fetchers-state (cons `(,forge-name . ,new-state) my-repo-pins--forge-fetchers-state))
+    (my-repo-pins--draw-ui-buffer my-repo-pins--forge-fetchers-state user-query)
+    (mutex-unlock my-repo-pins--forge-fetchers-state-mutex)))
 
 
-(defun h--query-forge-fetchers (repo-query)
+(defun my-repo-pins--query-forge-fetchers (repo-query)
   "Find repo matches to the relevant forges for REPO-QUERY then query forge.
 
 TODO: split that mess before release. We shouldn't query here."
-  (let* ((parsed-repo-query (h--parse-repo-identifier repo-query))
+  (let* ((parsed-repo-query (my-repo-pins--parse-repo-identifier repo-query))
          (repo-query-kind (alist-get 'tag parsed-repo-query)))
     (cond
      ((equal repo-query-kind 'owner-repo)
@@ -762,15 +764,15 @@ TODO: split that mess before release. We shouldn't query here."
                       (let ((new-state
                              (if (null result) 'not-found result)))
                       (progn
-                        (h--update-forges-state ,forge-str new-state ,repo-query))))))))
-       h-forge-fetchers))
+                        (my-repo-pins--update-forges-state ,forge-str new-state ,repo-query))))))))
+       my-repo-pins-forge-fetchers))
      ((equal repo-query-kind 'repo) (error (format "Can't checkout %s (for now), please specify a owner" repo-query)))
      ((equal repo-query-kind 'full-url)
       (let*
-          ((code-root (h--safe-get-code-root))
-           (dest-dir (concat code-root (h--filepath-from-clone-url repo-query))))
+          ((code-root (my-repo-pins--safe-get-code-root))
+           (dest-dir (concat code-root (my-repo-pins--filepath-from-clone-url repo-query))))
         (progn
-          (h--git-clone-in-dir
+          (my-repo-pins--git-clone-in-dir
            repo-query
            dest-dir
            (lambda (exit-code)
@@ -783,31 +785,29 @@ TODO: split that mess before release. We shouldn't query here."
 ;; Interactive Commands
 ;;;;;;;;;;;;;;;;;;;;;;;;
 
-;;;###autoload
-(defun h-clone-project (user-query)
-  "Clone USER-QUERY in its appropriate directory in ‘h-code-root’."
-  (interactive "sGit repository to checkout: ")
+(defun my-repo-pins--clone-project (user-query)
+  "Clone USER-QUERY in its appropriate directory in ‘my-repo-pins-code-root’."
   (progn
-    (setq h--forge-fetchers-state (h--init-forges-state h-forge-fetchers))
-    (h--query-forge-fetchers user-query)))
+    (setq my-repo-pins--forge-fetchers-state (my-repo-pins--init-forges-state my-repo-pins-forge-fetchers))
+    (my-repo-pins--query-forge-fetchers user-query)))
 
 ;;;###autoload
-(defun h-jump-to-project ()
-  "Open a project contained in the ‘h-code-root’ directory.
-If the project is not in the ‘h-code-root’ yet, check it out from the
+(defun my-repo-pins ()
+  "Open a project contained in the ‘my-repo-pins-code-root’ directory.
+If the project is not in the ‘my-repo-pins-code-root’ yet, check it out from the
 available forge sources."
   (interactive)
   (let ((user-query
-         (h--completing-read-or-custom
+         (my-repo-pins--completing-read-or-custom
            "Jump to project: "
-           (h--get-code-root-projects (h--safe-get-code-root)))))
+           (my-repo-pins--get-code-root-projects (my-repo-pins--safe-get-code-root)))))
     (cond
      ((equal (car user-query) 'in-collection)
-      (let ((selected-project-absolute-path (concat (h--safe-get-code-root) (cdr user-query))))
+      (let ((selected-project-absolute-path (concat (my-repo-pins--safe-get-code-root) (cdr user-query))))
         (find-file selected-project-absolute-path)))
      ((equal (car user-query) 'user-provided)
-      (h-clone-project (cdr user-query))))))
+      (my-repo-pins--clone-project (cdr user-query))))))
 
 
-(provide 'h)
-;;; h.el ends here
+(provide 'my-repo-pins)
+;;; my-repo-pins.el ends here

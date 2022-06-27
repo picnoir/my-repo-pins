@@ -21,15 +21,15 @@ INIT_PACKAGES="(progn \
 all: compile test package-lint clean-elc
 
 test:
-	${EMACS} -Q --eval ${INIT_PACKAGES} --batch -l h.el -l h-tests.el -f ert-run-tests-batch-and-exit
+	${EMACS} -Q --eval ${INIT_PACKAGES} --batch -l my-repo-pins.el -l my-repo-pins-tests.el -f ert-run-tests-batch-and-exit
 
 package-lint:
-	${EMACS} -Q --eval ${INIT_PACKAGES} --batch -f package-lint-batch-and-exit h.el
+	${EMACS} -Q --eval ${INIT_PACKAGES} --batch -f package-lint-batch-and-exit my-repo-pins.el
 
 compile: clean-elc
 	${EMACS} -Q --eval ${INIT_PACKAGES} -L . --batch -f batch-byte-compile *.el
 
-clean-elc:
+clean:
 	rm -f f.elc
 
 .PHONY:	all compile clean-elc package-lint test
