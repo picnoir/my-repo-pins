@@ -613,7 +613,7 @@ https-checkout-url)) ('key . \"1\"))."
               ((eq status 'loading) (format "[?] %s (loading...)" forge-name))
               ((eq status 'not-found) (format "[X] %s" forge-name))
               ((listp status) (format "[✓] %s" forge-name))
-              (t (error (format "my-repo-pins--draw-forge-status: Invalid forge status %s" status)))))
+              (t (error "my-repo-pins--draw-forge-status: Invalid forge status %s" status))))
        (text (if (null key)
                  (format "%s\n" status-text)
                (format "%s [%s]\n" status-text (char-to-string key))))
@@ -621,11 +621,11 @@ https-checkout-url)) ('key . \"1\"))."
                     ((eq status 'loading) "orange")
                     ((eq status 'not-found) "red")
                     ((listp status) "green")
-                    (t (error (format "my-repo-pins--draw-forge-status: Invalid forge status %s" status)))))
+                    (t (error "my-repo-pins--draw-forge-status: Invalid forge status %s" status))))
        (my-repo-pins-buffer (current-buffer))
        (original-point (point)))
   (progn
-    (if (not (null key))
+    (if key
         (my-repo-pins--evil-safe-binding (kbd (format "%s" (char-to-string key)))
                        `(lambda ()
                          (interactive)
@@ -639,7 +639,7 @@ https-checkout-url)) ('key . \"1\"))."
                          (+ original-point 4)
                          `(face (:foreground ,font-color :weight bold)))
     ;; Set color for key binding (if there's one)
-    (if (not (null key))
+    (if key
         (set-text-properties (- (point) 4) (point)
                              '(face (:foreground "orange" :weight bold)))))))
 
@@ -668,7 +668,7 @@ url."
        (code-root (my-repo-pins--safe-get-code-root))
        (dest-dir (concat code-root (my-repo-pins--filepath-from-clone-url http-url))))
     (progn
-      (message (format "Cloning %s to %s" ssh-url dest-dir))
+      (message "Cloning %s to %s" ssh-url dest-dir)
       (cl-flet*
           ((clone-http
             ()
@@ -677,9 +677,9 @@ url."
                   dest-dir
                   (lambda (exit-code)
                     (if (not (equal exit-code 0))
-                         (error (format "Cannot clone %s nor %s." ssh-url http-url))
+                         (error "Cannot clone %s nor %s" ssh-url http-url)
                       (progn
-                        (message (format "Successfully cloned %s" dest-dir))
+                        (message "Successfully cloned %s" dest-dir)
                         (find-file dest-dir))))))
            (clone-ssh
             ()
@@ -689,11 +689,11 @@ url."
                   (lambda (exit-code)
                     (if (not (equal exit-code 0))
                          (progn
-                           (message (format "Failed to clone %s" ssh-url))
-                           (message (format "Trying again with %s" http-url))
+                           (message "Failed to clone %s" ssh-url)
+                           (message "Trying again with %s" http-url)
                            (clone-http))
                       (progn
-                        (message (format "Successfully cloned %s" dest-dir))
+                        (message "Successfully cloned %s" dest-dir)
                         (find-file dest-dir)))))))
         (clone-ssh)))))
 
@@ -766,7 +766,7 @@ TODO: split that mess before release. We shouldn't query here."
                       (progn
                         (my-repo-pins--update-forges-state ,forge-str new-state ,repo-query))))))))
        my-repo-pins-forge-fetchers))
-     ((equal repo-query-kind 'repo) (error (format "Can't checkout %s (for now), please specify a owner" repo-query)))
+     ((equal repo-query-kind 'repo) (error "Can't checkout %s (for now), please specify a owner" repo-query))
      ((equal repo-query-kind 'full-url)
       (let*
           ((code-root (my-repo-pins--safe-get-code-root))
@@ -778,7 +778,7 @@ TODO: split that mess before release. We shouldn't query here."
            (lambda (exit-code)
              (if (equal exit-code 0)
                  (find-file dest-dir)
-               (error (format "Cannot clone %s." repo-query))))))))
+               (error "Cannot clone %s" repo-query)))))))
     (t (error repo-query-kind)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
