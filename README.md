@@ -3,13 +3,11 @@
 ![Project logo](./doc/assets/logo-white.svg#gh-dark-mode-only)
 ![Project logo](./doc/assets/logo-black.svg#gh-light-mode-only)
 
+My Repo Pins - move between projects quickly
 
+Open source developers often have to jump between projects, either to read code, or to craft patches. My Repo Pins reduces the friction so that it becomes trivial to do so.
 
-This Emacs plugin is all about helping you to keep your git repositories organized in a single unified tree.
-
-The general idea is to organize the repositories by reflecting their remote clone URLs.
-
-IE., having a directory structure like that:
+The idea of the plugin is based on this idea; if the repository URLs can be translated to a filesystem location, the local disk can be used like a cache. My Repo Pins lazily clones the repo to the filesystem location if needed, and then jumps into the project in one single command. You don't have to remember where you put the project on the local filesystem because it's always using the same location. Something like this:
 
 ```
 ~/code-root
