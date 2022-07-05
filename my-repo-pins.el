@@ -1,4 +1,4 @@
-;;; my-repo-pins.el --- Helps you keep your git repositories organized -*- lexical-binding: t -*-
+;;; my-repo-pins.el --- Keep your git repositories organized -*- lexical-binding: t -*-
 
 ;;; Copyright (C) 2022 Félix Baylac Jacqué
 ;;; Author: Félix Baylac Jacqué <felix at alternativebit.fr>
@@ -7,71 +7,76 @@
 ;;; Homepage: https://github.com/NinjaTrappeur/my-repo-pins.el
 ;;; Package-Requires: ((emacs "26.1"))
 ;;; License:
-;;;
-;;; This program is free software; you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License as published by
-;;; the Free Software Foundation, either version 3 of the License, or
-;;; (at your option) any later version.
-;;;
-;;; This program is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;;; GNU General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <https://www.gnu.org/licenses/>
-;;;
+;;
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+;;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+;;
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <https://www.gnu.org/licenses/>
+;;
 ;;; Commentary:
-;;; This plugin one and only goal is to help you keep your git
-;;; repositories organized in a single unified tree.
-;;;
-;;; The general idea is to organize the repositories by reflecting
-;;; their remote clone URLs.
-;;;
-;;; IE., having a directory structure like that:
-;;;
-;;; ~/code-root
-;;; ├── codeberg.org
-;;; │   └── Freeyourgadget
-;;; │       └── Gadgetbridge
-;;; └── github.com
-;;;     ├── BaseAdresseNationale
-;;;     │   └── fantoir
-;;;     ├── mpv-player
-;;;     │   └── mpv
-;;;     └── NinjaTrappeur
-;;;         ├── cinny
-;;;         └── my-repo-pins.el
-;;;
-;;; The main entry point of this package is the my-repo-pins command.
-;;; Using it, you can either:
-;;;
-;;; - Open dired in a local project you already cloned.
-;;; - Query remote forges for a repository, clone it, and finally open
-;;;   dired in the clone directory.
-;;; - Clone a git clone URL and open dired to the right directory.
-;;;
-;;; The minimal configuration consists in setting the directory in
-;;; which you want to clone all your git repositories via the
-;;; my-repo-pins-code-root variable.
-;;;
-;;; Let's say you'd like to store all your git repositories in the
-;;; ~/code-root directory. You'll want to add the following snippet in
-;;; your Emacs configuration file:
-;;;
-;;;    (require 'my-repo-pins)
-;;;    (setq my-repo-pins-code-root "~/code-root")
-;;;
-;;; You can then call the M-x my-repo-pins command to open a
-;;; project living in your ~/code-root directory or clone a new
-;;; project in your code root.
-;;;
-;;; Binding this command to a global key binding might make things a
-;;; bit more convenient. I personally like to bind it to M-h. You can
-;;; add the following snippet to your Emacs configuration to set up
-;;; this key binding:
-;;;
-;;;    (global-set-key (kbd "M-h") 'my-repo-pins)
+;;
+;; Open source developers often have to jump between projects, either
+;; to read code, or to craft patches. My Repo Pins reduces the
+;; friction so that it becomes trivial to do so.
+
+;; The idea of the plugin is based on this idea; if the repository
+;; URLs can be translated to a filesystem location, the local disk can
+;; be used like a cache. My Repo Pins lazily clones the repo to the
+;; filesystem location if needed, and then jumps into the project in
+;; one single command. You don't have to remember where you put the
+;; project on the local filesystem because it's always using the same
+;; location. Something like this:
+;;
+;; ~/code-root
+;; ├── codeberg.org
+;; │   └── Freeyourgadget
+;; │       └── Gadgetbridge
+;; └── github.com
+;;     ├── BaseAdresseNationale
+;;     │   └── fantoir
+;;     ├── mpv-player
+;;     │   └── mpv
+;;     └── NinjaTrappeur
+;;         ├── cinny
+;;         └── my-repo-pins.el
+;;
+;; The main entry point of this package is the my-repo-pins command.
+;; Using it, you can either:
+;;
+;; - Open Dired in a local project you already cloned.
+;; - Query remote forges for a repository, clone it, and finally open
+;;   Dired in the clone directory.
+;; - Clone a git clone URL and open Dired to the right directory.
+;;
+;; The minimal configuration consists in setting the directory in
+;; which you want to clone all your git repositories via the
+;; my-repo-pins-code-root variable.
+;;
+;; Let's say you'd like to store all your git repositories in the
+;; ~/code-root directory. You'll want to add the following snippet in
+;; your Emacs configuration file:
+;;
+;;    (require 'my-repo-pins)
+;;    (setq my-repo-pins-code-root "~/code-root")
+;;
+;; You can then call the M-x my-repo-pins command to open a
+;; project living in your ~/code-root directory or clone a new
+;; project in your code root.
+;;
+;; Binding this command to a global key binding might make things a
+;; bit more convenient. I personally like to bind it to M-h. You can
+;; add the following snippet to your Emacs configuration to set up
+;; this key binding:
+;;
+;;    (global-set-key (kbd "M-h") 'my-repo-pins)
 
 ;;; Code:
 
@@ -86,9 +91,7 @@
   "Variables used to setup the my-repo-pins.el project manager."
   :group 'Communication)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Internal: git primitives
-;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defcustom my-repo-pins-git-bin "git"
   "Path pointing to the git binary.
@@ -145,11 +148,11 @@ Returns the git PROCESS object."
 Call CALLBACK with no arguments once the git subprocess exists."
   (my-repo-pins--call-git-in-dir "~/" callback "clone" clone-url checkout-filepath))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;===========================
 ;; Internal: builtin fetchers
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;===========================
 
-;;; Generic fetcher infrastructure
+;; Generic fetcher infrastructure
 (defvar my-repo-pins--builtins-forge-fetchers
   '(("GitHub.com" .
      ((query-user-repo . my-repo-pins--query-github-owner-repo)))
@@ -196,7 +199,7 @@ A ongoing/failed lookup will also be represented by an entry in this alist:
   (make-mutex "my-repo-pins-ui-mutex")
   "Mutex in charge of preventing several fetchers to update the state concurently.")
 
-;;; Sourcehut Fetcher
+;; Sourcehut Fetcher
 (defun my-repo-pins--query-sourcehut-owner-repo (instance-url user-name repo-name callback)
   "Query the INSTANCE-URL Sourcehut instance and retrieve some infos about a repo.
 
@@ -227,7 +230,7 @@ using a HEAD request and infer the clone links from there."
               (https . ,(format "https://%s/~%s/%s" instance-url user-name repo-name))))))))
     (setq url-request-method nil)))
 
-;;; Gitlab Fetcher
+;; Gitlab Fetcher
 (defun my-repo-pins--query-gitlab-owner-repo (instance-url user-name repo-name callback)
   "Queries the INSTANCE-URL Gitlab instance and retrieve some infos about a repo.
 
@@ -259,7 +262,7 @@ only option we have for now."
               (https . ,(format "https://%s/%s/%s.git" instance-url user-name repo-name))))))))
     (setq url-request-method nil)))
 
-;;; Github Fetcher
+;; Github Fetcher
 (defun my-repo-pins--query-github-owner-repo (user-name repo-name callback)
   "Queries the GitHub API to retrieve some infos about a GitHub repo.
 This function will first try to determine whether
@@ -301,7 +304,7 @@ Returns nil if the repo does not exists."
                    (https . ,https-url))))
            nil)))
 
-;;; Gitea Fetcher
+;; Gitea Fetcher
 (defun my-repo-pins--query-gitea-owner-repo (instance-url user-name repo-name callback)
   "Queries the INSTANCE-URL gitea instance to retrieve a repo informations.
 This function will first try to dertermine whether the
@@ -341,9 +344,9 @@ Returns nil if the repo does not exists."
                    (https . ,https-url))))
            nil)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;==========================
 ;; Internal: repo URI parser
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;==========================
 
 (defun my-repo-pins--parse-repo-identifier (query-str)
   "Do its best to figure out which repo the user meant by QUERY-STR.
@@ -405,9 +408,9 @@ CLONE-STR being the git clone URL we want to find the local path for."
                 (repo-url (string-remove-suffix ".git" (cadr colon-split))))
              (format "%s/%s" fqdn repo-url))))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;=========================================
 ;; Internal: code-root management functions
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;=========================================
 
 (defcustom my-repo-pins-code-root nil
   "Root directory containing all your projects.
@@ -493,9 +496,9 @@ yet, returns an empty list."
           (mapcar remove-code-root-prefix-and-trailing-slash projects-absolute-path)))
       projects-relative-to-code-root)))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;=============
 ;; Internal: UI
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;=============
 
 (defun my-repo-pins--evil-safe-binding (kbd action)
   "Bind ACTION to the KBD keyboard key.
@@ -689,9 +692,9 @@ url."
         (clone-ssh)))))
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;=========================================
 ;; Internal: improving builtin autocomplete
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;=========================================
 
 (defun my-repo-pins--completing-read-or-custom (prompt collection)
   "Behaves similarly to ‘complete-read’.
@@ -710,9 +713,9 @@ READ-RESULT)"
         `(in-collection . ,read-result)
       `(user-provided . ,read-result))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;====================================
 ;; Internal: Internal state management
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;====================================
 
 (defun my-repo-pins--init-forges-state (forge-fetchers)
   "Initialize ‘my-repo-pins--forge-fetchers-state’.
@@ -772,9 +775,9 @@ TODO: split that mess before release. We shouldn't query here."
                (error "Cannot clone %s" repo-query)))))))
     (t (error repo-query-kind)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;
+;;=====================
 ;; Interactive Commands
-;;;;;;;;;;;;;;;;;;;;;;;;
+;;=====================
 
 (defun my-repo-pins--clone-project (user-query)
   "Clone USER-QUERY in its appropriate directory in ‘my-repo-pins-code-root’."
