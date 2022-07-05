@@ -105,7 +105,7 @@ Errors out if we can't find it."
     (let ((git-from-bin-path (locate-file my-repo-pins-git-bin exec-path)))
       (if (file-executable-p git-from-bin-path)
           git-from-bin-path
-          (error "Can't find git. Is my-repo-pins-git-bin correctly set?")))))
+          (user-error "Can't find git. Is my-repo-pins-git-bin correctly set?")))))
 
 (defun my-repo-pins--call-git-in-dir (dir &optional callback &rest args)
   "Call the git binary as pointed by ‘my-repo-pins-git-bin’ in DIR with ARGS.
@@ -428,7 +428,7 @@ local directory"
     "Ensure ‘my-repo-pins-code-root’ is correctly set, then canonalize the path.
 Errors out if ‘my-repo-pins-code-root’ has not been set yet."
     (progn (when (not my-repo-pins-code-root)
-             (error "My-Repo-Pins-code-root has not been set. Please point it to your code root"))
+             (user-error "My-Repo-Pins-code-root has not been set. Please point it to your code root"))
            (expand-file-name (file-name-as-directory my-repo-pins-code-root))))
 
 
@@ -757,7 +757,7 @@ TODO: split that mess before release. We shouldn't query here."
                       (progn
                         (my-repo-pins--update-forges-state ,forge-str new-state ,repo-query))))))))
        my-repo-pins-forge-fetchers))
-     ((equal repo-query-kind 'repo) (error "Can't checkout %s (for now), please specify a owner" repo-query))
+     ((equal repo-query-kind 'repo) (user-error "Can't checkout %s (for now), please specify a owner" repo-query))
      ((equal repo-query-kind 'full-url)
       (let*
           ((code-root (my-repo-pins--safe-get-code-root))
