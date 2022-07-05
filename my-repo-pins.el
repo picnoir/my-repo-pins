@@ -539,7 +539,7 @@ associate each of them with a key binding.
 , ‘my-repo-pins--draw-forge-status’ is in charge of
 drawing the forge status in the my-repo-pins.el buffer."
   (let* (
-        (my-repo-pins-buffer (get-buffer-create "my-repo-pins.el"))
+        (my-repo-pins-buffer (get-buffer-create "my-repo-pins-ui-buffer"))
         (my-repo-pins-window nil)
         (previous-buffer (current-buffer))
         (forge-status-with-keys (my-repo-pins--add-keys-to-forge-status forge-query-status)))
