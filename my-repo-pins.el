@@ -124,23 +124,21 @@ Returns the git PROCESS object."
         (git-sentinel (lambda
                         (process _event)
                         (let ((exit-code (process-exit-status process)))
-                          (progn
-                            (if (window-valid-p git-window)
-                                (delete-window git-window))
-                            (if callback
-                                (funcall callback exit-code)))))))
-      (progn
-        (set-buffer git-buffer)
-        (erase-buffer)
-        (setq default-directory dir)
-        (setq git-window (display-buffer git-buffer))
-        (prog1
-            (make-process
-             :name "my-repo-pins-git-subprocess"
-             :buffer git-buffer
-             :command (seq-concatenate 'list `(,(my-repo-pins--git-path)) args)
-             :sentinel git-sentinel)
-          (set-buffer current-buffer)))))
+                          (if (window-valid-p git-window)
+                              (delete-window git-window))
+                          (if callback
+                              (funcall callback exit-code))))))
+    (set-buffer git-buffer)
+    (erase-buffer)
+    (setq default-directory dir)
+    (setq git-window (display-buffer git-buffer))
+    (prog1
+        (make-process
+         :name "my-repo-pins-git-subprocess"
+         :buffer git-buffer
+         :command (seq-concatenate 'list `(,(my-repo-pins--git-path)) args)
+         :sentinel git-sentinel)
+      (set-buffer current-buffer))))
 
 (defun my-repo-pins--git-clone-in-dir (clone-url checkout-filepath &optional callback)
   "Clone the CLONE-URL repo at CHECKOUT-FILEPATH.
@@ -216,19 +214,18 @@ authentication token. We can't really afford to ask the user to
 manually generate such a token for this plugin. We want it to work out
 of the box. Meaning, instead of using the API, we query the webapp
 using a HEAD request and infer the clone links from there."
-  (progn
-    (setq url-request-method "HEAD")
-    (url-retrieve
-     (format "https://%s/~%s/%s" instance-url user-name repo-name)
-     (lambda (status &rest _rest)
-       (let ((repo-not-found (plist-get status :error)))
-         (if repo-not-found
-             (funcall callback nil)
-           (funcall
-            callback
-            `((ssh . ,(format "git@%s:~%s/%s" instance-url user-name repo-name))
-              (https . ,(format "https://%s/~%s/%s" instance-url user-name repo-name))))))))
-    (setq url-request-method nil)))
+  (setq url-request-method "HEAD")
+  (url-retrieve
+   (format "https://%s/~%s/%s" instance-url user-name repo-name)
+   (lambda (status &rest _rest)
+     (let ((repo-not-found (plist-get status :error)))
+       (if repo-not-found
+           (funcall callback nil)
+         (funcall
+          callback
+          `((ssh . ,(format "git@%s:~%s/%s" instance-url user-name repo-name))
+            (https . ,(format "https://%s/~%s/%s" instance-url user-name repo-name))))))))
+  (setq url-request-method nil))
 
 ;; Gitlab Fetcher
 (defun my-repo-pins--query-gitlab-owner-repo (instance-url user-name repo-name callback)
@@ -248,19 +245,18 @@ clone URL of a repository. Meaning instead of using an API, we make a
 HEAD request to the repository HTTP endpoint and infer by ourselves
 the clone URLs. It might go south at some point, but that's sadly the
 only option we have for now."
-  (progn
-    (setq url-request-method "HEAD")
-    (url-retrieve
-     (format "https://%s/%s/%s" instance-url user-name repo-name)
-     (lambda (status &rest _rest)
-       (let ((repo-not-found (plist-get status :error)))
-         (if repo-not-found
-             (funcall callback nil)
-           (funcall
-            callback
-            `((ssh . ,(format "git@%s:%s/%s.git" instance-url user-name repo-name))
-              (https . ,(format "https://%s/%s/%s.git" instance-url user-name repo-name))))))))
-    (setq url-request-method nil)))
+  (setq url-request-method "HEAD")
+  (url-retrieve
+   (format "https://%s/%s/%s" instance-url user-name repo-name)
+   (lambda (status &rest _rest)
+     (let ((repo-not-found (plist-get status :error)))
+       (if repo-not-found
+           (funcall callback nil)
+         (funcall
+          callback
+          `((ssh . ,(format "git@%s:%s/%s.git" instance-url user-name repo-name))
+            (https . ,(format "https://%s/%s/%s.git" instance-url user-name repo-name))))))))
+  (setq url-request-method nil))
 
 ;; Github Fetcher
 (defun my-repo-pins--query-github-owner-repo (user-name repo-name callback)
@@ -271,10 +267,9 @@ github.com/USER-NAME/REPO-NAME exists.
 If so, calls the CALLBACK function with a alist containing the ssh and
 https clone URLs. If the repo does not exists, calls the callback with
 nil as parameter."
-  (progn
-    (url-retrieve
-     (format "https://api.github.com/repos/%s/%s" user-name repo-name)
-     (lambda (&rest _rest) (funcall callback (my-repo-pins--fetch-github-parse-response(current-buffer)))))))
+  (url-retrieve
+   (format "https://api.github.com/repos/%s/%s" user-name repo-name)
+   (lambda (&rest _rest) (funcall callback (my-repo-pins--fetch-github-parse-response(current-buffer))))))
 
 
 (defun my-repo-pins--fetch-github-parse-response (response-buffer)
@@ -290,19 +285,17 @@ If the repo does exists, returns a alist in the form of:
 )
 
 Returns nil if the repo does not exists."
-  (progn (set-buffer response-buffer)
-         (goto-char (point-min))
-         (if (not(eq(re-search-forward "^HTTP/1.1 200 OK$" nil t) nil))
-             (progn
-               (goto-char (point-min))
-               (re-search-forward "^$")
-               (delete-region (point) (point-min))
-               (let* ((parsed-buffer (json-read))
-                      (ssh-url (alist-get 'ssh_url parsed-buffer))
-                      (https-url (alist-get 'clone_url parsed-buffer)))
-                 `((ssh . ,ssh-url)
-                   (https . ,https-url))))
-           nil)))
+  (set-buffer response-buffer)
+  (goto-char (point-min))
+  (when (not(eq(re-search-forward "^HTTP/1.1 200 OK$" nil t) nil))
+    (goto-char (point-min))
+    (re-search-forward "^$")
+    (delete-region (point) (point-min))
+    (let* ((parsed-buffer (json-read))
+           (ssh-url (alist-get 'ssh_url parsed-buffer))
+           (https-url (alist-get 'clone_url parsed-buffer)))
+      `((ssh . ,ssh-url)
+        (https . ,https-url)))))
 
 ;; Gitea Fetcher
 (defun my-repo-pins--query-gitea-owner-repo (instance-url user-name repo-name callback)
@@ -330,19 +323,17 @@ If the repo does exists, returns a alist in the form of:
 )
 
 Returns nil if the repo does not exists."
-  (progn (set-buffer response-buffer)
-         (goto-char (point-min))
-         (if (not(eq(re-search-forward "^HTTP/1.1 200 OK$" nil t) nil))
-             (progn
-               (goto-char (point-min))
-               (re-search-forward "^$")
-               (delete-region (point) (point-min))
-               (let* ((parsed-buffer (json-read))
-                      (ssh-url (alist-get 'ssh_url parsed-buffer))
-                      (https-url (alist-get 'clone_url parsed-buffer)))
-                 `((ssh . ,ssh-url)
-                   (https . ,https-url))))
-           nil)))
+  (set-buffer response-buffer)
+  (goto-char (point-min))
+  (when (not(eq(re-search-forward "^HTTP/1.1 200 OK$" nil t) nil))
+    (goto-char (point-min))
+    (re-search-forward "^$")
+    (delete-region (point) (point-min))
+    (let* ((parsed-buffer (json-read))
+           (ssh-url (alist-get 'ssh_url parsed-buffer))
+           (https-url (alist-get 'clone_url parsed-buffer)))
+      `((ssh . ,ssh-url)
+        (https . ,https-url)))))
 
 ;;==========================
 ;; Internal: repo URI parser
@@ -430,9 +421,9 @@ local directory"
 (defun my-repo-pins--safe-get-code-root ()
     "Ensure ‘my-repo-pins-code-root’ is correctly set, then canonalize the path.
 Errors out if ‘my-repo-pins-code-root’ has not been set yet."
-    (progn (when (not my-repo-pins-code-root)
-             (user-error "My-Repo-Pins-code-root has not been set. Please point it to your code root"))
-           (expand-file-name (file-name-as-directory my-repo-pins-code-root))))
+    (when (not my-repo-pins-code-root)
+      (user-error "My-Repo-Pins-code-root has not been set. Please point it to your code root"))
+    (expand-file-name (file-name-as-directory my-repo-pins-code-root)))
 
 
 (defun my-repo-pins--find-git-dirs-recursively (dir)
@@ -464,7 +455,7 @@ included."
 	      (when (not (file-symlink-p full-file))
                 (if (file-directory-p (concat full-file ".git"))
                     ;; It's a git repo, let's stop here.
-                    (progn (setq projects (nconc projects (list full-file))))
+                    (setq projects (nconc projects (list full-file)))
                   ;; It's not a git repo, let's recurse into it.
                   (setq recur-result
                         (nconc recur-result
@@ -509,11 +500,9 @@ is used, the key binding will be bound to the normal mode as well."
     (if evil-mode-enabled
         (progn
           (local-set-key kbd action)
-
           (when (require 'evil-core nil t)
-            (progn
               (declare-function evil-local-set-key "ext:evil-core.el" "STATE" "KEY" "DEF" t)
-              (evil-local-set-key 'normal kbd action))))
+              (evil-local-set-key 'normal kbd action)))
       (local-set-key kbd action))))
 
 (defun my-repo-pins--draw-ui-buffer (forge-query-status user-query)
@@ -537,25 +526,23 @@ drawing the forge status in the my-repo-pins.el buffer."
         (my-repo-pins-window nil)
         (previous-buffer (current-buffer))
         (forge-status-with-keys (my-repo-pins--add-keys-to-forge-status forge-query-status)))
-    (progn
-      (set-buffer my-repo-pins-buffer)
-      (setq buffer-read-only nil)
-      (erase-buffer)
-      (insert (format "Looking up for %s in different forges:\n\n\n" user-query))
-      (set-text-properties 1 (point) `(face (:foreground "orange" :weight bold)))
-      (seq-map
-       (lambda (e) (my-repo-pins--draw-forge-status e)) forge-status-with-keys)
-      (insert "\n\nPlease select the forge we should clone the project from.\n")
-      (insert "Press q to close this window.")
-      (setq buffer-read-only t)
-      (my-repo-pins--evil-safe-binding (kbd "q")
-                            `(lambda () (interactive)
-                               (progn
-                                 (delete-window)
-                                 (kill-buffer ,my-repo-pins-buffer))))
-      (set-buffer previous-buffer)
-      (setq my-repo-pins-window (display-buffer my-repo-pins-buffer))
-      (select-window my-repo-pins-window))))
+    (set-buffer my-repo-pins-buffer)
+    (setq buffer-read-only nil)
+    (erase-buffer)
+    (insert (format "Looking up for %s in different forges:\n\n\n" user-query))
+    (set-text-properties 1 (point) `(face (:foreground "orange" :weight bold)))
+    (seq-map
+     (lambda (e) (my-repo-pins--draw-forge-status e)) forge-status-with-keys)
+    (insert "\n\nPlease select the forge we should clone the project from.\n")
+    (insert "Press q to close this window.")
+    (setq buffer-read-only t)
+    (my-repo-pins--evil-safe-binding (kbd "q")
+                                     `(lambda () (interactive)
+                                          (delete-window)
+                                          (kill-buffer ,my-repo-pins-buffer)))
+    (set-buffer previous-buffer)
+    (setq my-repo-pins-window (display-buffer my-repo-pins-buffer))
+    (select-window my-repo-pins-window)))
 
 (defun my-repo-pins--add-keys-to-forge-status (forge-query-status)
   "Add key bindings to relevant FORGE-QUERY-STATUS entries.
@@ -618,15 +605,13 @@ https-checkout-url)) ('key . \"1\"))."
                     (t (error "my-repo-pins--draw-forge-status: Invalid forge status %s" status))))
        (my-repo-pins-buffer (current-buffer))
        (original-point (point)))
-  (progn
     (if key
         (my-repo-pins--evil-safe-binding (kbd (format "%s" (char-to-string key)))
-                       `(lambda ()
-                         (interactive)
-                         (progn
-                           (delete-window)
-                           (kill-buffer ,my-repo-pins-buffer)
-                           (my-repo-pins--clone-from-forge-result ',forge-result)))))
+                                         `(lambda ()
+                                            (interactive)
+                                            (delete-window)
+                                            (kill-buffer ,my-repo-pins-buffer)
+                                            (my-repo-pins--clone-from-forge-result ',forge-result))))
     (insert text)
     ;; Set color for status indicator
     (set-text-properties original-point
@@ -635,7 +620,7 @@ https-checkout-url)) ('key . \"1\"))."
     ;; Set color for key binding (if there's one)
     (if key
         (set-text-properties (- (point) 4) (point)
-                             '(face (:foreground "orange" :weight bold)))))))
+                             '(face (:foreground "orange" :weight bold))))))
 
 (defun my-repo-pins--find-next-available-key-binding (cur-key-binding)
   "Find a key binding starting CUR-KEY-BINDING for the my-repo-pins buffer.
@@ -661,7 +646,6 @@ url."
        (http-url (alist-get 'https forge-result-status))
        (code-root (my-repo-pins--safe-get-code-root))
        (dest-dir (concat code-root (my-repo-pins--filepath-from-clone-url http-url))))
-    (progn
       (message "Cloning %s to %s" ssh-url dest-dir)
       (cl-flet*
           ((clone-http
@@ -689,7 +673,7 @@ url."
                       (progn
                         (message "Successfully cloned %s" dest-dir)
                         (find-file dest-dir)))))))
-        (clone-ssh)))))
+        (clone-ssh))))
 
 
 ;;=========================================
@@ -729,12 +713,11 @@ alist."
   "Update ‘my-repo-pins--forge-fetchers-state’ for FORGE-NAME with NEW-STATE.
 
 USER-QUERY was the original query for this state update."
-  (progn
-    (mutex-lock my-repo-pins--forge-fetchers-state-mutex)
-    (setq my-repo-pins--forge-fetchers-state (assq-delete-all forge-name my-repo-pins--forge-fetchers-state))
-    (setq my-repo-pins--forge-fetchers-state (cons `(,forge-name . ,new-state) my-repo-pins--forge-fetchers-state))
-    (my-repo-pins--draw-ui-buffer my-repo-pins--forge-fetchers-state user-query)
-    (mutex-unlock my-repo-pins--forge-fetchers-state-mutex)))
+  (mutex-lock my-repo-pins--forge-fetchers-state-mutex)
+  (setq my-repo-pins--forge-fetchers-state (assq-delete-all forge-name my-repo-pins--forge-fetchers-state))
+  (setq my-repo-pins--forge-fetchers-state (cons `(,forge-name . ,new-state) my-repo-pins--forge-fetchers-state))
+  (my-repo-pins--draw-ui-buffer my-repo-pins--forge-fetchers-state user-query)
+  (mutex-unlock my-repo-pins--forge-fetchers-state-mutex))
 
 
 (defun my-repo-pins--query-forge-fetchers (repo-query)
@@ -757,22 +740,20 @@ TODO: split that mess before release. We shouldn't query here."
                     (lambda (result)
                       (let ((new-state
                              (if (null result) 'not-found result)))
-                      (progn
-                        (my-repo-pins--update-forges-state ,forge-str new-state ,repo-query))))))))
+                        (my-repo-pins--update-forges-state ,forge-str new-state ,repo-query)))))))
        my-repo-pins-forge-fetchers))
      ((equal repo-query-kind 'repo) (user-error "Can't checkout %s (for now), please specify a owner" repo-query))
      ((equal repo-query-kind 'full-url)
       (let*
           ((code-root (my-repo-pins--safe-get-code-root))
            (dest-dir (concat code-root (my-repo-pins--filepath-from-clone-url repo-query))))
-        (progn
           (my-repo-pins--git-clone-in-dir
            repo-query
            dest-dir
            (lambda (exit-code)
              (if (equal exit-code 0)
                  (find-file dest-dir)
-               (error "Cannot clone %s" repo-query)))))))
+               (error "Cannot clone %s" repo-query))))))
     (t (error repo-query-kind)))))
 
 ;;=====================
@@ -781,9 +762,8 @@ TODO: split that mess before release. We shouldn't query here."
 
 (defun my-repo-pins--clone-project (user-query)
   "Clone USER-QUERY in its appropriate directory in ‘my-repo-pins-code-root’."
-  (progn
-    (setq my-repo-pins--forge-fetchers-state (my-repo-pins--init-forges-state my-repo-pins-forge-fetchers))
-    (my-repo-pins--query-forge-fetchers user-query)))
+  (setq my-repo-pins--forge-fetchers-state (my-repo-pins--init-forges-state my-repo-pins-forge-fetchers))
+  (my-repo-pins--query-forge-fetchers user-query))
 
 ;;;###autoload
 (defun my-repo-pins ()
