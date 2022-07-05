@@ -681,12 +681,12 @@ url."
 ;;=========================================
 
 (defun my-repo-pins--completing-read-or-custom (prompt collection)
-  "Behaves similarly to ‘complete-read’.
+  "Behaves similarly to ‘completing-read’.
 
-See the ‘complete-read’ documentation for more details about PROMPT
+See the ‘completing-read’ documentation for more details about PROMPT
 and COLLECTION.
 
-Behaves similarly to ‘complete-read’ with REQUIRE-MATCH set to nil
+Behaves similarly to ‘completing-read’ with REQUIRE-MATCH set to nil
 except it'll return an extra element specifying whether the input was
 found in COLLECTION or if the result is a custom user-provided input.
 
