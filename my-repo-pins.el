@@ -506,20 +506,11 @@ is used, the key binding will be bound to the normal mode as well."
     (if evil-mode-enabled
         (progn
           (local-set-key kbd action)
+
           (when (require 'evil-core nil t)
-            ;; Buckle up, dirty hack ahead:
-            ;;
-            ;; As I am writing this, there's no way to tell the emacs
-            ;; byte compiler a particular dependency is optional.
-            ;; Here, I want to use a evil-mode function *IFF*
-            ;; evil-mode is already installed and used for the current
-            ;; buffer.
-            ;; The only way around I found is to prevent emacs to
-            ;; bytecode-compile the evil function by deffering the
-            ;; evaluation through a runtime eval. It's not a big deal
-            ;; performance-wise: evil-local-set-key is pretty cheap
-            ;; and not frequently used in our codebase.
-            (eval `(evil-local-set-key 'normal ,kbd ',action))))
+            (progn
+              (declare-function evil-local-set-key "ext:evil-core.el" "STATE" "KEY" "DEF" t)
+              (evil-local-set-key 'normal kbd action))))
       (local-set-key kbd action))))
 
 (defun my-repo-pins--draw-ui-buffer (forge-query-status user-query)
