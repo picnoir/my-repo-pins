@@ -176,7 +176,7 @@ This variable contains fetchers for:
                         :value-type (choice function string)))
   :group 'my-repo-pins-group)
 
-(defvar my-repo-pins--forge-fetchers-state '()
+(defvar my-repo-pins--forge-fetchers-state nil
 
   "Internal state where we keep a forge request status.
 
@@ -476,7 +476,7 @@ any further.
 If the directory pointed by ‘my-repo-pins-code-root’ does not exists
 yet, returns an empty list."
   (if (not (file-directory-p code-root))
-      '()
+      nil
     (let*
         ((remove-code-root-prefix-and-trailing-slash
           (lambda (path)
