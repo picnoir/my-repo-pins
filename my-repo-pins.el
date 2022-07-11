@@ -281,8 +281,7 @@ If the repo does exists, returns a alist in the form of:
 
 `(
   (ssh . SSH-CHECKOUT-URL)
-  (https . HTTPS-CHECKOUT-URL)
-)
+  (https . HTTPS-CHECKOUT-URL))
 
 Returns nil if the repo does not exists."
   (set-buffer response-buffer)
@@ -319,8 +318,7 @@ If the repo does exists, returns a alist in the form of:
 
 `(
   (ssh . SSH-CHECKOUT-URL)
-  (https . HTTPS-CHECKOUT-URL)
-)
+  (https . HTTPS-CHECKOUT-URL))
 
 Returns nil if the repo does not exists."
   (set-buffer response-buffer)
