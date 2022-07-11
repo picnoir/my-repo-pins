@@ -299,7 +299,7 @@ Returns nil if the repo does not exists."
 ;; Gitea Fetcher
 (defun my-repo-pins--query-gitea-owner-repo (instance-url user-name repo-name callback)
   "Queries the INSTANCE-URL gitea instance to retrieve a repo informations.
-This function will first try to dertermine whether the
+This function will first try to determine whether the
 USER-NAME/REPO-NAME exists.
 
 If so, calls the CALLBACK function with a alist containing the ssh and
@@ -430,7 +430,7 @@ Errors out if ‘my-repo-pins-code-root’ has not been set yet."
 This library isn't available for Emacs > 25.1. Vendoring it for
 backward compatibility.
 
-We take advantage of vendoring this function to taylor it a bit more
+We take advantage of vendoring this function to tailor it a bit more
 for our needs.
 
 Return list of all git repositories under directory DIR. This function works
