@@ -4,7 +4,7 @@
 ;;; Author: Félix Baylac Jacqué <felix at alternativebit.fr>
 ;;; Maintainer: Félix Baylac Jacqué <felix at alternativebit.fr>
 ;;; Version: 0.1
-;;; Homepage: https://github.com/NinjaTrappeur/my-repo-pins.el
+;;; Homepage: https://github.com/NinjaTrappeur/my-repo-pins
 ;;; Package-Requires: ((emacs "26.1"))
 ;;; License:
 ;;
@@ -46,7 +46,7 @@
 ;;     │   └── mpv
 ;;     └── NinjaTrappeur
 ;;         ├── cinny
-;;         └── my-repo-pins.el
+;;         └── my-repo-pins
 ;;
 ;; The main entry point of this package is the my-repo-pins command.
 ;; Using it, you can either:
@@ -88,7 +88,7 @@
 (eval-when-compile (require 'subr-x))
 
 (defgroup my-repo-pins-group nil
-  "Variables used to setup the my-repo-pins.el project manager."
+  "Variables used to setup the my-repo-pins project manager."
   :group 'Communication)
 
 ;; Internal: git primitives
@@ -281,8 +281,7 @@ If the repo does exists, returns a alist in the form of:
 
 `(
   (ssh . SSH-CHECKOUT-URL)
-  (https . HTTPS-CHECKOUT-URL)
-)
+  (https . HTTPS-CHECKOUT-URL))
 
 Returns nil if the repo does not exists."
   (set-buffer response-buffer)
@@ -300,7 +299,7 @@ Returns nil if the repo does not exists."
 ;; Gitea Fetcher
 (defun my-repo-pins--query-gitea-owner-repo (instance-url user-name repo-name callback)
   "Queries the INSTANCE-URL gitea instance to retrieve a repo informations.
-This function will first try to dertermine whether the
+This function will first try to determine whether the
 USER-NAME/REPO-NAME exists.
 
 If so, calls the CALLBACK function with a alist containing the ssh and
@@ -319,8 +318,7 @@ If the repo does exists, returns a alist in the form of:
 
 `(
   (ssh . SSH-CHECKOUT-URL)
-  (https . HTTPS-CHECKOUT-URL)
-)
+  (https . HTTPS-CHECKOUT-URL))
 
 Returns nil if the repo does not exists."
   (set-buffer response-buffer)
@@ -362,9 +360,9 @@ each kind of format, it'll return something along the line of:
 \"https://full-url.org/path/to/git/repo/checkout\"))
 or
 \(('tag . 'owner-repo) ('owner . \"NinjaTrappeur\") ('repo\
-. \"my-repo-pins.el\"))
+. \"my-repo-pins\"))
 or
-\(('tag . 'repo) ('repo . \"my-repo-pins.el\"))"
+\(('tag . 'repo) ('repo . \"my-repo-pins\"))"
   (cond
    ;; Full-url case
    ((or (string-match "^https?://.*/.*/.*$" query-str)
@@ -405,10 +403,10 @@ CLONE-STR being the git clone URL we want to find the local path for."
 
 (defcustom my-repo-pins-code-root nil
   "Root directory containing all your projects.
-my-repo-pins.el organise the git repos you'll checkout in a tree
+my-repo-pins organise the git repos you'll checkout in a tree
 fashion.
 
-All the code fetched using my-repo-pins.el will end up in this root directory. A
+All the code fetched using my-repo-pins will end up in this root directory. A
 tree of subdirectories will be created mirroring the remote URI.
 
 For instance, after checking out
@@ -432,7 +430,7 @@ Errors out if ‘my-repo-pins-code-root’ has not been set yet."
 This library isn't available for Emacs > 25.1. Vendoring it for
 backward compatibility.
 
-We take advantage of vendoring this function to taylor it a bit more
+We take advantage of vendoring this function to tailor it a bit more
 for our needs.
 
 Return list of all git repositories under directory DIR. This function works
@@ -520,7 +518,7 @@ We're going to draw these forge query status results in a buffer and
 associate each of them with a key binding.
 
 , ‘my-repo-pins--draw-forge-status’ is in charge of
-drawing the forge status in the my-repo-pins.el buffer."
+drawing the forge status in the my-repo-pins buffer."
   (let* (
         (my-repo-pins-buffer (get-buffer-create "my-repo-pins-ui-buffer"))
         (my-repo-pins-window nil)
