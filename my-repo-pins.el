@@ -4,7 +4,7 @@
 ;;; Author: Félix Baylac Jacqué <felix at alternativebit.fr>
 ;;; Maintainer: Félix Baylac Jacqué <felix at alternativebit.fr>
 ;;; Version: 0.1
-;;; Homepage: https://github.com/NinjaTrappeur/my-repo-pins
+;;; Homepage: https://alternativebit.fr/projects/my-repo-pins/
 ;;; Package-Requires: ((emacs "26.1"))
 ;;; License:
 ;;
