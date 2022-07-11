@@ -1,4 +1,4 @@
-# My Repo Pins  [![CI](https://github.com/NinjaTrappeur/my-repo-pins/actions/workflows/test.yml/badge.svg)](https://github.com/NinjaTrappeur/my-repo-pins/actions/workflows/test.yml)
+# My Repo Pins  [![CI](https://github.com/NinjaTrappeur/my-repo-pins/actions/workflows/test.yml/badge.svg)](https://github.com/NinjaTrappeur/my-repo-pins/actions/workflows/test.yml) [![MELPA](https://melpa.org/packages/my-repo-pins-badge.svg)](https://melpa.org/#/my-repo-pins)
 
 ![Project logo](./doc/assets/logo-white.svg#gh-dark-mode-only)
 ![Project logo](./doc/assets/logo-black.svg#gh-light-mode-only)
@@ -41,6 +41,21 @@ As always, a small demo is worth a thousand words!
 **Alternatively, you can also specify a absolute git URL you want to clone:**
 
 ![Screen capture showcasing my-repo-pins cloning a git repository using a absolute git url before jumping to it](./doc/assets/clone-absolute-url.webp)
+
+## Installation
+
+### Via MELPA (recommended)
+
+This package is available on [MELPA](https://melpa.org). After [adding MELPA to your `packages-archives`](https://melpa.org/#/getting-started), run:
+
+```
+M-x package-install
+my-repo-pins
+```
+
+### Manually
+
+Clone this repository, open the `my-repo-pins.el` file, then, install the package using `M-x package-install-file`.
 
 ## Quick Start
 
