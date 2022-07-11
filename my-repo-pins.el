@@ -46,7 +46,7 @@
 ;;     │   └── mpv
 ;;     └── NinjaTrappeur
 ;;         ├── cinny
-;;         └── my-repo-pins.el
+;;         └── my-repo-pins
 ;;
 ;; The main entry point of this package is the my-repo-pins command.
 ;; Using it, you can either:
@@ -88,7 +88,7 @@
 (eval-when-compile (require 'subr-x))
 
 (defgroup my-repo-pins-group nil
-  "Variables used to setup the my-repo-pins.el project manager."
+  "Variables used to setup the my-repo-pins project manager."
   :group 'Communication)
 
 ;; Internal: git primitives
@@ -362,9 +362,9 @@ each kind of format, it'll return something along the line of:
 \"https://full-url.org/path/to/git/repo/checkout\"))
 or
 \(('tag . 'owner-repo) ('owner . \"NinjaTrappeur\") ('repo\
-. \"my-repo-pins.el\"))
+. \"my-repo-pins\"))
 or
-\(('tag . 'repo) ('repo . \"my-repo-pins.el\"))"
+\(('tag . 'repo) ('repo . \"my-repo-pins\"))"
   (cond
    ;; Full-url case
    ((or (string-match "^https?://.*/.*/.*$" query-str)
@@ -405,10 +405,10 @@ CLONE-STR being the git clone URL we want to find the local path for."
 
 (defcustom my-repo-pins-code-root nil
   "Root directory containing all your projects.
-my-repo-pins.el organise the git repos you'll checkout in a tree
+my-repo-pins organise the git repos you'll checkout in a tree
 fashion.
 
-All the code fetched using my-repo-pins.el will end up in this root directory. A
+All the code fetched using my-repo-pins will end up in this root directory. A
 tree of subdirectories will be created mirroring the remote URI.
 
 For instance, after checking out
@@ -520,7 +520,7 @@ We're going to draw these forge query status results in a buffer and
 associate each of them with a key binding.
 
 , ‘my-repo-pins--draw-forge-status’ is in charge of
-drawing the forge status in the my-repo-pins.el buffer."
+drawing the forge status in the my-repo-pins buffer."
   (let* (
         (my-repo-pins-buffer (get-buffer-create "my-repo-pins-ui-buffer"))
         (my-repo-pins-window nil)
