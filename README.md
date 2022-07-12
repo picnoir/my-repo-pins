@@ -64,7 +64,7 @@ The minimal configuration consists in setting the directory in which you want to
 Let's say you'd like to store all your git repositories in the `~/code-root` directory. You'll want to add the following snippet in your Emacs configuration file:
 
 ```elisp
-(require 'h)
+(require 'my-repo-pins)
 (setq my-repo-pins-code-root "~/code-root")
 ```
 
