@@ -3,7 +3,7 @@
 ;;; Copyright (C) 2022 Félix Baylac Jacqué
 ;;; Author: Félix Baylac Jacqué <felix at alternativebit.fr>
 ;;; Maintainer: Félix Baylac Jacqué <felix at alternativebit.fr>
-;;; Version: 0.1
+;;; Version: 0.2
 ;;; Homepage: https://alternativebit.fr/projects/my-repo-pins/
 ;;; Package-Requires: ((emacs "26.1"))
 ;;; License:
