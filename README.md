@@ -86,6 +86,18 @@ All the code fetched using `my-repo-pins` will end up in this root directory. A 
 
 For instance, after checking out https://git.savannah.gnu.org/git/emacs/org-mode.git, the source code will live in the my-repo-pins-code-root/git.savannah.gnu.org/git/emacs/org-mode/ local directory
 
+### my-repo-pins-max-depth
+
+Maximum search depth starting from the `my-repo-pins-code-root` directory.
+
+Set this variable to nil if you don't want any limit.
+
+This is a performance stop gap. It'll prevent my repo pins from accidentally walking too deep if it fails to detect a project boundary.
+
+By default, this limit is set to 2 to materialize the `<forge>/<username>` directories that are supposed to contain the projects.
+
+We won't search further once we reach this limit. A warning message is issued to the `*Messages*` buffer to warn the user the limit has been reached.
+
 ### my-repo-pins-git-bin
 
 Path pointing to the git binary. By default, it'll look for git in the current `$PATH`.

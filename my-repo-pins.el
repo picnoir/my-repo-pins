@@ -3,7 +3,7 @@
 ;;; Copyright (C) 2022 Félix Baylac Jacqué
 ;;; Author: Félix Baylac Jacqué <felix at alternativebit.fr>
 ;;; Maintainer: Félix Baylac Jacqué <felix at alternativebit.fr>
-;;; Version: 0.1
+;;; Version: 0.2
 ;;; Homepage: https://alternativebit.fr/projects/my-repo-pins/
 ;;; Package-Requires: ((emacs "26.1"))
 ;;; License:
@@ -22,7 +22,6 @@
 ;; along with this program.  If not, see <https://www.gnu.org/licenses/>
 ;;
 ;;; Commentary:
-;;
 ;; Open source developers often have to jump between projects, either
 ;; to read code, or to craft patches. My Repo Pins reduces the
 ;; friction so that it becomes trivial to do so.
@@ -196,6 +195,26 @@ A ongoing/failed lookup will also be represented by an entry in this alist:
 (defvar my-repo-pins--forge-fetchers-state-mutex
   (make-mutex "my-repo-pins-ui-mutex")
   "Mutex in charge of preventing several fetchers to update the state concurently.")
+
+(defcustom my-repo-pins-max-depth
+  2
+  "Maximum search depth starting from the ‘my-repo-pins-code-root’ directory.
+
+Set this variable to nil if you don't want any limit.
+
+This is a performance stop gap. It'll prevent my repo pins from
+accidentally walking too deep if it fails to detect a project
+boundary.
+
+By default, this limit is set to 2 to materialize the
+<forge>/<username> directories that are supposed to contain the
+projects.
+
+We won't search further once we reach this limit. A warning message is
+issued to the *Messages* buffer to warn the user the limit has been
+reached."
+  :type 'integer
+  :group 'my-repo-pins-group)
 
 ;; Sourcehut Fetcher
 (defun my-repo-pins--query-sourcehut-owner-repo (instance-url user-name repo-name callback)
@@ -424,7 +443,7 @@ Errors out if ‘my-repo-pins-code-root’ has not been set yet."
     (expand-file-name (file-name-as-directory my-repo-pins-code-root)))
 
 
-(defun my-repo-pins--find-git-dirs-recursively (dir)
+(defun my-repo-pins--find-git-dirs-recursively (dir max-depth)
   "Vendored, slightly modified version of ‘directory-files-recursively’.
 
 This library isn't available for Emacs > 25.1. Vendoring it for
@@ -438,30 +457,52 @@ recursively. Files are returned in \"depth first\" order, and files
 from each directory are sorted in alphabetical order. Each file name
 appears in the returned list in its absolute form.
 
-By default, the returned list excludes directories, but if
-optional argument INCLUDE-DIRECTORIES is non-nil, they are
-included."
-  (let* ((projects nil)
-         (recur-result nil)
-         (dir (directory-file-name dir)))
-    (dolist (file (sort (file-name-all-completions "" dir)
-			'string<))
-      (unless (member file '("./" "../"))
-	(if (directory-name-p file)
-	      ;; Don't follow symlinks to other directories.
-            (let ((full-file (concat dir "/" file)))
-	      (when (not (file-symlink-p full-file))
-                (if (file-directory-p (concat full-file ".git"))
-                    ;; It's a git repo, let's stop here.
-                    (setq projects (nconc projects (list full-file)))
-                  ;; It's not a git repo, let's recurse into it.
-                  (setq recur-result
-                        (nconc recur-result
-                               (my-repo-pins--find-git-dirs-recursively full-file)))))))))
-   (nconc recur-result (nreverse projects))))
+The recursion will halt once MAX-DEPTH is reached. In that case, a
+information message will be written to the message buffer.
 
+If MAX-DEPTH is set to nil, do not use any recursion stop gap."
+  (cl-labels
+      ((recurse-in-dir
+        (dir depth)
+        (let* ((projects nil)
+               (recur-result nil)
+               (dir (directory-file-name dir)))
+          (dolist (file (sort (file-name-all-completions "" dir)
+			      'string<))
+            (unless (member file '("./" "../"))
+	      (if (directory-name-p file)
+                  (let ((full-file (concat dir "/" file)))
+	            ;; Don't follow symlinks to other directories.
+	            (when (not (file-symlink-p full-file))
+                      (if (file-directory-p (concat full-file ".git"))
+                          ;; It's a git repo, let's stop here.
+                          (setq projects (nconc projects (list full-file)))
+                        ;; It's not a git repo, let's recurse into it.
+                        (if max-depth
+                            ;; if we didn't reach the max depth yet, recurse.
+                            (if (not (> (+ depth 1) max-depth))
+                              (setq recur-result
+                                    (nconc recur-result
+                                           (recurse-in-dir full-file (+ depth 1))))
+                              ;; we reached the max depth limit, issue a info message
+                              (message
+                               (concat
+                                "my-repo-pins: max depth reached for "
+                                "%s, we won't search for projects in that directory. "
+                                "We might miss some projects. "
+                                "Increase the my-repo-pins-max-depth variable value if "
+                                "you want to look for projects in that directory.")
+                               full-file))
+                          ;; There's no max depth, let's recurse.
+                          (setq recur-result
+                                (nconc recur-result
+                                       (recurse-in-dir full-file nil))))))))))
+          (nconc recur-result (nreverse projects)))))
+    (if max-depth
+          (recurse-in-dir dir 0)
+      (recurse-in-dir dir nil))))
 
-(defun my-repo-pins--get-code-root-projects (code-root)
+(defun my-repo-pins--get-code-root-projects (code-root max-depth)
   "Retrieve the projects contained in the CODE-ROOT directory.
 We're going to make some hard assumptions about how the
 ‘my-repo-pins-code-root’ directory should look like. First of all, if
@@ -470,6 +511,10 @@ considered as a project root.
 
 It means that after encountering a git repository, we won't recurse
 any further.
+
+We also won't recurse for directories nested deeper than MAX-DEPTH.
+
+If MAX-DEPTH is set to -1, do not use any recursion stop gap.
 
 If the directory pointed by ‘my-repo-pins-code-root’ does not exists
 yet, returns an empty list."
@@ -480,7 +525,7 @@ yet, returns an empty list."
           (lambda (path)
             (let ((path-without-prefix (string-remove-prefix code-root path)))
                 (substring path-without-prefix 0 (1- (length path-without-prefix))))))
-         (projects-absolute-path (my-repo-pins--find-git-dirs-recursively code-root))
+         (projects-absolute-path (my-repo-pins--find-git-dirs-recursively code-root max-depth))
          (projects-relative-to-code-root
           (mapcar remove-code-root-prefix-and-trailing-slash projects-absolute-path)))
       projects-relative-to-code-root)))
@@ -774,7 +819,7 @@ available forge sources."
   (let ((user-query
          (my-repo-pins--completing-read-or-custom
            "Jump to project: "
-           (my-repo-pins--get-code-root-projects (my-repo-pins--safe-get-code-root)))))
+           (my-repo-pins--get-code-root-projects (my-repo-pins--safe-get-code-root) my-repo-pins-max-depth))))
     (cond
      ((equal (car user-query) 'in-collection)
       (let ((selected-project-absolute-path (concat (my-repo-pins--safe-get-code-root) (cdr user-query))))
