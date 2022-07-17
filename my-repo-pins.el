@@ -721,7 +721,7 @@ USER-QUERY was the original query for this state update."
 (defun my-repo-pins--query-forge-fetchers (repo-query)
   "Find repo matches to the relevant forges for REPO-QUERY then query forge.
 
-TODO: split that mess before release. We shouldn't query here."
+TODO: split that mess before 1.0. We shouldn't query here."
   (let* ((parsed-repo-query (my-repo-pins--parse-repo-identifier repo-query))
          (repo-query-kind (alist-get 'tag parsed-repo-query)))
     (cond
@@ -745,14 +745,16 @@ TODO: split that mess before release. We shouldn't query here."
       (let*
           ((code-root (my-repo-pins--safe-get-code-root))
            (dest-dir (concat code-root (my-repo-pins--filepath-from-clone-url repo-query))))
-          (my-repo-pins--git-clone-in-dir
-           repo-query
-           dest-dir
-           (lambda (exit-code)
-             (if (equal exit-code 0)
-                 (find-file dest-dir)
-               (error "Cannot clone %s" repo-query))))))
-    (t (error repo-query-kind)))))
+        (if (not (file-directory-p dest-dir))
+            (my-repo-pins--git-clone-in-dir
+             repo-query
+             dest-dir
+             (lambda (exit-code)
+               (if (equal exit-code 0)
+                   (find-file dest-dir)
+                 (error "Cannot clone %s" repo-query))))
+          (find-file dest-dir))))
+     (t (error repo-query-kind)))))
 
 ;;=====================
 ;; Interactive Commands
