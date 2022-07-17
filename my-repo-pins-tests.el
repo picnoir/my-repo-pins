@@ -114,6 +114,36 @@ For reference: test-root-2 looks like this:
        (my-repo-pins--tests-init-fake-git-repo (concat temp-dir "example2.tld/user1/proj1"))
        (funcall func temp-dir)))))
 
+(defun my-repo-pins--tests-run-on-nested-testroot (func)
+  "Run the FUNC function on testroot2.
+
+FUNC is called with the directory cotaining test root 2 as parameter.
+
+For reference: test-root-2 looks like this:
+    test-root-2
+    ├── example1.tld
+    │   ├── user1
+    │   │   ├── proj1
+    │   │   ├── nested
+    │   │   │   └── repo
+    │   │   └── nested2
+    │   │       └── git
+    │   │           └── repo
+    │   └── user2
+    │       └── proj1
+    └── example2.tld
+        └── user1
+            └── proj1"
+  (my-repo-pins--tests-with-temp-dir
+   (lambda (temp-dir)
+     (progn
+       (my-repo-pins--tests-init-fake-git-repo (concat temp-dir "example1.tld/user1/proj1"))
+       (my-repo-pins--tests-init-fake-git-repo (concat temp-dir "example1.tld/user1/nested/repo"))
+       (my-repo-pins--tests-init-fake-git-repo (concat temp-dir "example1.tld/user1/nested2/git/repo"))
+       (my-repo-pins--tests-init-fake-git-repo (concat temp-dir "example1.tld/user2/proj1"))
+       (my-repo-pins--tests-init-fake-git-repo (concat temp-dir "example2.tld/user1/proj1"))
+       (funcall func temp-dir)))))
+
 
 (defun my-repo-pins--tests-run-on-empty-testroot (func)
   "Run the FUNC function on testroot1.
@@ -134,7 +164,7 @@ For reference: a empty test root looks like this:
   "Test the `my-repo-pins--get-code-root-projects with test-root-1 setup."
   (let
       ((results
-        (my-repo-pins--tests-run-on-testroot-1 (lambda (root) (my-repo-pins--get-code-root-projects root))))
+        (my-repo-pins--tests-run-on-testroot-1 (lambda (root) (my-repo-pins--get-code-root-projects root 3))))
        )
     (should (member "example1.tld/user1/proj1" results))
     (should (member "example1.tld/user1/proj2" results))
@@ -151,7 +181,7 @@ For reference: a empty test root looks like this:
         (my-repo-pins--tests-run-on-testroot-1
          (lambda (root)
            (progn (setq r root)
-                  (my-repo-pins--find-git-dirs-recursively root))))))
+                  (my-repo-pins--find-git-dirs-recursively root 3))))))
     (should (member (concat r "example1.tld/user1/proj1/") results))
     (should (member (concat r "example1.tld/user1/proj2/") results))
     (should (member (concat r "example1.tld/user2/proj1/") results))
@@ -162,12 +192,48 @@ For reference: a empty test root looks like this:
   "Test the `my-repo-pins--get-code-root-projects with test-root-2 setup."
   (let
       ((results
-        (my-repo-pins--tests-run-on-testroot-2 (lambda (root) (my-repo-pins--get-code-root-projects root))))
+        (my-repo-pins--tests-run-on-testroot-2 (lambda (root) (my-repo-pins--get-code-root-projects root 3))))
        )
     (should (member "example1.tld/user1/proj1" results))
     (should (member "example1.tld/user2/proj1" results))
     (should (member "example2.tld/user1/proj1" results))
     (should (eq (length results) 3))))
+
+(ert-deftest my-repo-pins--tests-get-code-root-projects-nested-coderoot-max-depth-2 ()
+  "Test the `my-repo-pins--get-code-root-projects with nested-test-root setup."
+  (let
+      ((results
+        (my-repo-pins--tests-run-on-nested-testroot (lambda (root) (my-repo-pins--get-code-root-projects root 2))))
+       )
+    (should (member "example1.tld/user1/proj1" results))
+    (should (member "example1.tld/user2/proj1" results))
+    (should (member "example2.tld/user1/proj1" results))
+    (should (eq (length results) 3))))
+
+(ert-deftest my-repo-pins--tests-get-code-root-projects-nested-coderoot-max-depth-3 ()
+  "Test the `my-repo-pins--get-code-root-projects with nested-test-root setup."
+  (let
+      ((results
+        (my-repo-pins--tests-run-on-nested-testroot (lambda (root) (my-repo-pins--get-code-root-projects root 3))))
+       )
+    (should (member "example1.tld/user1/proj1" results))
+    (should (member "example1.tld/user2/proj1" results))
+    (should (member "example2.tld/user1/proj1" results))
+    (should (member "example1.tld/user1/nested/repo" results))
+    (should (not (member "example1.tld/user1/nested2/git/repo" results)))
+    (should (eq (length results) 4))))
+
+(ert-deftest my-repo-pins--tests-get-code-root-projects-nested-coderoot-max-depth-no-limit ()
+  "Test the `my-repo-pins--get-code-root-projects with nested-test-root setup."
+  (let
+      ((results
+        (my-repo-pins--tests-run-on-nested-testroot (lambda (root) (my-repo-pins--get-code-root-projects root nil)))))
+    (should (member "example1.tld/user1/proj1" results))
+    (should (member "example1.tld/user2/proj1" results))
+    (should (member "example2.tld/user1/proj1" results))
+    (should (member "example1.tld/user1/nested/repo" results))
+    (should (member "example1.tld/user1/nested2/git/repo" results))
+    (should (eq (length results) 5))))
 
 (ert-deftest my-repo-pins--tests-find-git-dirs-recursively-coderoot-2 ()
   "Test the `my-repo-pins--get-code-root-projects with test-root-2 setup."
@@ -177,7 +243,7 @@ For reference: a empty test root looks like this:
         (my-repo-pins--tests-run-on-testroot-2
          (lambda (root)
            (progn (setq r root)
-                  (my-repo-pins--find-git-dirs-recursively root))))))
+                  (my-repo-pins--find-git-dirs-recursively root 3))))))
     (should (member (concat r "example1.tld/user1/proj1/") results))
     (should (member (concat r "example1.tld/user2/proj1/") results))
     (should (member (concat r "example2.tld/user1/proj1/") results))
@@ -187,7 +253,7 @@ For reference: a empty test root looks like this:
   "Test the `my-repo-pins--get-code-root-projects with a empty coderoot."
   (let
       ((results
-        (my-repo-pins--tests-run-on-empty-testroot (lambda (root) (my-repo-pins--get-code-root-projects root))))
+        (my-repo-pins--tests-run-on-empty-testroot (lambda (root) (my-repo-pins--get-code-root-projects root 3))))
        )
     (should (seq-empty-p results))))
 
@@ -195,14 +261,14 @@ For reference: a empty test root looks like this:
   "Test the `my-repo-pins--get-code-root-projects with a empty coderoot."
   (let
       ((results
-        (my-repo-pins--tests-run-on-empty-testroot (lambda (root) (my-repo-pins--find-git-dirs-recursively root))))
+        (my-repo-pins--tests-run-on-empty-testroot (lambda (root) (my-repo-pins--find-git-dirs-recursively root 3))))
        )
     (should (seq-empty-p results))))
 
 (ert-deftest my-repo-pins--tests-get-code-root-projects-no-coderoot ()
   "Test the `my-repo-pins--get-code-root-projects with a non-existing coderoot."
   (let
-      ((results (my-repo-pins--get-code-root-projects "/does/not/exist")))
+      ((results (my-repo-pins--get-code-root-projects "/does/not/exist" 3)))
     (should (seq-empty-p results))))
 
 
