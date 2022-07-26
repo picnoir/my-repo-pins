@@ -474,7 +474,7 @@ If MAX-DEPTH is set to nil, do not use any recursion stop gap."
                   (let ((full-file (concat dir "/" file)))
 	            ;; Don't follow symlinks to other directories.
 	            (when (not (file-symlink-p full-file))
-                      (if (file-directory-p (concat full-file ".git"))
+                      (if (my-repo-pins--is-git-dir full-file)
                           ;; It's a git repo, let's stop here.
                           (setq projects (nconc projects (list full-file)))
                         ;; It's not a git repo, let's recurse into it.
@@ -501,6 +501,10 @@ If MAX-DEPTH is set to nil, do not use any recursion stop gap."
     (if max-depth
           (recurse-in-dir dir 0)
       (recurse-in-dir dir nil))))
+
+(defun my-repo-pins--is-git-dir (dir)
+  "Return non-nil if DIR is a git directory."
+  (file-exists-p (concat (file-name-as-directory dir) ".git")))
 
 (defun my-repo-pins--get-code-root-projects (code-root max-depth)
   "Retrieve the projects contained in the CODE-ROOT directory.
