@@ -27,6 +27,7 @@
 ;;; Code:
 
 (require 'ert)
+(require 'ert-async)
 (require 'my-repo-pins)
 
 ;; Test Helpers
@@ -39,13 +40,14 @@ FUNC gets called with the temp dir as parameter.
 The directory gets deleted once we exit FUNC."
   (let ((temp-dir (make-temp-file "my-repo-pins-test-" t)))
     (unwind-protect
-          (funcall func (file-name-as-directory temp-dir))
+        (funcall func (file-name-as-directory temp-dir))
       (delete-directory temp-dir t))))
 
 (defun my-repo-pins--tests-init-fake-git-repo (dir)
   "Create a dummy git repo at DIR.
-
-If DIR doesn't exists, we create it first."
+If DIR doesn't exists, we create it first.
+The created git repository won't contain any tracked file nor
+commits."
   (let* ((d (file-name-as-directory dir))
          (git-process
           (progn
@@ -59,6 +61,24 @@ If DIR doesn't exists, we create it first."
       ;; being. Blocking and waiting for the git process to exit
       ;; before moving on.
       (while (accept-process-output git-process)))))
+
+(defun my-repo-pins--tests-init-fake-git-repo-with-commit (dir)
+  "Create a dummy git repo having a valid commit at DIR.
+If DIR doesn't exists, we create it first.
+This function is functionally similar to
+‘my-repo-pins--tests-init-fake-git-repo’, however it's more expensive
+to execute. Only use it when you need a git repository containing some
+commits."
+  (let* ((d (file-name-as-directory dir))
+         (dummy-git-repo "./tests/fixtures/dummy-git-repo"))
+    (unless (file-directory-p d) (make-directory d t))
+    ;; This is a nasty trick. We can't easily generate a git commit on
+    ;; runtime. We also can't check-in a git repository in a git
+    ;; repository.
+    ;; We rename the .git subfolder in the fixture to .git-to-rename
+    ;; to trick git into thinking this is not a git repo.
+    (copy-directory dummy-git-repo d nil nil t)
+    (rename-file (concat d "/.git-to-rename") (concat d "/.git"))))
 
 ;; Test Dirs Setup
 ;;;;;;;;;;;;;;;;;
@@ -271,7 +291,49 @@ For reference: a empty test root looks like this:
       ((results (my-repo-pins--get-code-root-projects "/does/not/exist" 3)))
     (should (seq-empty-p results))))
 
+;; Clone Tests
+;;;;;;;;;;;;;;
 
+(ert-deftest-async my-repo-pins--test-git-clone-in-dir-valid-url (done)
+  "Test the ‘my-repo-pins--git-clone-in-dir’ function on a valid repository URL.
+
+Note: this function is async, we can't use
+my--repo-pins--tests-with-temp-dir to create the temporary directory:
+it'll get deleted before the end of the test."
+  (let* ((tmpdir (make-temp-file "my-repo-pins-test-" t))
+         (source (concat tmpdir "/source"))
+         (destination (concat tmpdir "/destination")))
+    (make-directory source)
+    (my-repo-pins--tests-init-fake-git-repo-with-commit source)
+    (my-repo-pins--git-clone-in-dir
+     (concat "file://" source)
+     destination
+     (lambda (exit-code)
+       (message "tmpdir: %s" tmpdir)
+       (should (eq exit-code 0))
+       (should (file-exists-p (concat tmpdir "/destination/hello")))
+       (delete-directory tmpdir t)
+       (funcall done)))))
+
+(ert-deftest-async my-repo-pins--test-git-clone-in-dir-invalid-url (done)
+  "Test the ‘my-repo-pins--git-clone-in-dir’ function on a valid repository URL.
+
+Note: this function is async, we can't use
+my--repo-pins--tests-with-temp-dir to create the temporary directory:
+it'll get deleted before the end of the test."
+  (let* ((tmpdir (make-temp-file "my-repo-pins-test-" t))
+         (source (concat tmpdir "/source"))
+         (destination (concat tmpdir "/destination")))
+    (make-directory source)
+    (my-repo-pins--tests-init-fake-git-repo-with-commit source)
+    (my-repo-pins--git-clone-in-dir
+     (concat "file://" source "doesnotexists")
+     destination
+     (lambda (exit-code)
+       (should (not (eq exit-code 0)))
+       (should (not (file-exists-p (concat tmpdir "/destination"))))
+       (delete-directory tmpdir t)
+       (funcall done)))))
 ;; Test Fetchers
 ;;;;;;;;;;;;;;;;;
 
@@ -339,20 +401,6 @@ For reference: a empty test root looks like this:
   (should (equal (my-repo-pins--filepath-from-clone-url "ssh://git@github.com:NinjaTrappeur/my-repo-pins.el") "github.com/NinjaTrappeur/my-repo-pins.el"))
   (should (equal (my-repo-pins--filepath-from-clone-url "git@github.com:NinjaTrappeur/my-repo-pins.el.git") "github.com/NinjaTrappeur/my-repo-pins.el"))
   (should (equal (my-repo-pins--filepath-from-clone-url "git@github.com:NinjaTrappeur/my-repo-pins.el") "github.com/NinjaTrappeur/my-repo-pins.el")))
-
-(ert-deftest my-repo-pins--test-git-clone-in-dir ()
-  "Test the my-repo-pins--git-clone-in-dir function."
-    (my-repo-pins--tests-run-on-testroot-1
-     (lambda (dir)
-       (let*
-           ((tmpdir (make-temp-file "my-repo-pins-test-" t))
-            (git-process (my-repo-pins--git-clone-in-dir
-                          (format "file://%s" (concat dir "example1.tld/user1/proj1/"))
-                          tmpdir)))
-         (progn
-           (while (accept-process-output git-process))
-           (should (file-exists-p (format "%s/.git" tmpdir)))
-           (delete-directory tmpdir t))))))
 
 ;;; State Management tests
 
