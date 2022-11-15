@@ -378,6 +378,27 @@ it'll get deleted before the end of the test."
            (my-repo-pins--parse-repo-identifier "https://github.com/Ninjatrappeur/my-repo-pins.el")
            '((tag . full-url) (full-url . "https://github.com/Ninjatrappeur/my-repo-pins.el"))))
   (should (equal
+           (my-repo-pins--parse-repo-identifier "git@github.com:NinjaTrappeur/my-repo-pins.git")
+           '((tag . full-url) (full-url . "git@github.com:NinjaTrappeur/my-repo-pins.git"))))
+  (should (equal
+           (my-repo-pins--parse-repo-identifier "git://sourceware.org/git/elfutils.git")
+           '((tag . full-url) (full-url . "git://sourceware.org/git/elfutils.git"))))
+  (should (equal
+           (my-repo-pins--parse-repo-identifier "ssh://sourceware.org/git/elfutils.git")
+           '((tag . full-url) (full-url . "ssh://sourceware.org/git/elfutils.git"))))
+  (should (equal
+           (my-repo-pins--parse-repo-identifier "ftp://sourceware.org/git/elfutils.git")
+           '((tag . full-url) (full-url . "ftp://sourceware.org/git/elfutils.git"))))
+  (should (equal
+           (my-repo-pins--parse-repo-identifier "ftps://sourceware.org/git/elfutils.git")
+           '((tag . full-url) (full-url . "ftps://sourceware.org/git/elfutils.git"))))
+  (should (equal
+           (my-repo-pins--parse-repo-identifier "user@sourceware.org/git/elfutils.git")
+           '((tag . full-url) (full-url . "user@sourceware.org/git/elfutils.git"))))
+  (should (equal
+           (my-repo-pins--parse-repo-identifier "sourceware.org/git/elfutils.git")
+           '((tag . full-url) (full-url . "sourceware.org/git/elfutils.git"))))
+  (should (equal
            (my-repo-pins--parse-repo-identifier "github.com/Ninjatrappeur/my-repo-pins.el")
            '((tag . full-url) (full-url . "github.com/Ninjatrappeur/my-repo-pins.el"))))
   (should (equal

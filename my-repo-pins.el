@@ -399,7 +399,8 @@ or
   (cond
    ;; Full-url case
    ((or (string-match "^https?://.*/.*/.*$" query-str)
-        (string-match "^.*/.*/.*$" query-str))
+        (string-match "^.*/.*/.*$" query-str)
+        (string-match "^.*@.*:?.*$" query-str))
     `((tag . full-url) (full-url . ,query-str)))
    ;; owner/repo case
    ((string-match "^.*/.*$" query-str)
