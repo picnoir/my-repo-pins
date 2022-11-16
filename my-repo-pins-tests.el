@@ -4,6 +4,7 @@
 ;;; Author: Félix Baylac Jacqué <felix at alternativebit.fr>
 ;;; Maintainer: Félix Baylac Jacqué <felix at alternativebit.fr>
 ;;; Version: 1.14.0
+;;; Packages-Requires: ((ert-async "0.1.2"))
 
 ;;; License:
 
