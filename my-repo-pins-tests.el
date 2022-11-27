@@ -335,6 +335,17 @@ it'll get deleted before the end of the test."
        (should (not (file-exists-p (concat tmpdir "/destination"))))
        (delete-directory tmpdir t)
        (funcall done)))))
+;; Git filter Tests
+;;;;;;;;;;;;;;
+
+(ert-deftest my-repo-pins--test-call-git-in-dir-process-filter ()
+  "Test the ‘my-repo-pins--test-call-git-in-dir-process-filter’ filter."
+  (should (equal (my-repo-pins--call-git-in-dir-process-filter (format "hello%cworld" 13)) "hello\nworld"))
+  (should (equal (my-repo-pins--call-git-in-dir-process-filter "hello\nworld") "hello\nworld"))
+  (should (equal (my-repo-pins--call-git-in-dir-process-filter "hello\rworld\ranother\rline") "hello\nworld\nanother\nline"))
+  (should (equal (my-repo-pins--call-git-in-dir-process-filter "hello\nworld\nanother\nline") "hello\nworld\nanother\nline"))
+)
+
 ;; Test Fetchers
 ;;;;;;;;;;;;;;;;;
 
