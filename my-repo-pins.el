@@ -109,6 +109,18 @@ Errors out if we can't find it."
           git-from-bin-path
           (user-error "Can't find git. Is my-repo-pins-git-bin correctly set?")))))
 
+(defun my-repo-pins--call-git-in-dir-process-filter (str)
+    "Filtering the git output for ‘my-repo-pins--call-git-in-dir’ call.
+
+By default, git seems to be terminating its stdout/stderr lines using
+the CR; sequence instead of the traditional CR;LF; unix sequence.
+
+This filter tries to detect these isolated CR sequences and convert
+them in a CR;LF sequence.
+
+STR being the string we have to process."
+    (replace-regexp-in-string "\r" "\n" str))
+
 (defun my-repo-pins--call-git-in-dir (dir &optional callback &rest args)
   "Call the git binary as pointed by ‘my-repo-pins-git-bin’ in DIR with ARGS.
 
@@ -120,6 +132,10 @@ Returns the git PROCESS object."
   (let* ((git-buffer (get-buffer-create "*my repo pins git log*"))
         (git-window nil)
         (current-buffer (current-buffer))
+        (git-filter (lambda
+                      (proc str)
+                      (with-current-buffer (process-buffer proc)
+                        (insert (my-repo-pins--call-git-in-dir-process-filter str)))))
         (git-sentinel (lambda
                         (process _event)
                         (let ((exit-code (process-exit-status process)))
@@ -136,6 +152,7 @@ Returns the git PROCESS object."
          :name "my-repo-pins-git-subprocess"
          :buffer git-buffer
          :command (seq-concatenate 'list `(,(my-repo-pins--git-path)) args)
+         :filter git-filter
          :sentinel git-sentinel)
       (set-buffer current-buffer))))
 
