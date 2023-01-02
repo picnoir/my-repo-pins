@@ -106,6 +106,14 @@ Path pointing to the git binary. By default, it'll look for git in the current `
 
 Alist in the form of `("FORGE NAME" . FETCH-FUNCTION)` where `FETCH-FUNCTION` is a function in charge of retrieving a potential remote clone URL. More about this function in the [Fetchers](#fetchers) section.
 
+### my-repo-pins-open-function
+
+The my-repo-pins-open-function variable can be customized if you would prefer to land in some other program than Dired.  Good candidates might be the builtin 'vc-dir or 'magit-status if you use the popular Magit package:
+
+```elisp
+   (setq my-repo-pins-open-function 'vc-dir)
+```
+
 ## Fetchers
 
 When a repository cannot be found in the code root directory, `my-repo-pins` will try to download it from different forges. By default, it'll try to find it on github.com, gitlab.com, git.sr.ht, and codeberg.org.

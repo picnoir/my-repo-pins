@@ -579,6 +579,7 @@ yet, returns an empty list."
   :group 'my-repo-pins-group)
 
 (defun my-repo-pins--open (dir)
+  "Open the DIR directory using the ‘my-repo-pins-code-root’ function."
   (funcall my-repo-pins-open-function dir))
 
 ;;=============
