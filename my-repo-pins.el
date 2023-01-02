@@ -76,6 +76,13 @@
 ;; this key binding:
 ;;
 ;;    (global-set-key (kbd "M-h") 'my-repo-pins)
+;;
+;; The my-repo-pins-open-function variable can be customized if you
+;; would prefer to land in some other program than Dired.  Good
+;; candidates might be the builtin 'vc-dir or 'magit-status if you use
+;; the popular Magit package:
+;;
+;;    (setq my-repo-pins-open-function 'vc-dir)
 
 ;;; Code:
 
@@ -566,6 +573,15 @@ yet, returns an empty list."
           (mapcar remove-code-root-prefix-and-trailing-slash projects-absolute-path)))
       projects-relative-to-code-root)))
 
+(defcustom my-repo-pins-open-function 'find-file
+  "Function to call once the repository is located and available."
+  :type 'function
+  :group 'my-repo-pins-group)
+
+(defun my-repo-pins--open (dir)
+  "Open the DIR directory using the ‘my-repo-pins-code-root’ function."
+  (funcall my-repo-pins-open-function dir))
+
 ;;=============
 ;; Internal: UI
 ;;=============
@@ -737,7 +753,7 @@ url."
                          (error "Cannot clone %s nor %s" ssh-url http-url)
                       (progn
                         (message "Successfully cloned %s" dest-dir)
-                        (find-file dest-dir))))))
+                        (my-repo-pins--open dest-dir))))))
            (clone-ssh
             ()
             (my-repo-pins--git-clone-in-dir
@@ -751,7 +767,7 @@ url."
                            (clone-http))
                       (progn
                         (message "Successfully cloned %s" dest-dir)
-                        (find-file dest-dir)))))))
+                        (my-repo-pins--open dest-dir)))))))
         (clone-ssh))))
 
 (defun my-repo-pins--clone-from-full-url (full-url &optional callback)
@@ -770,7 +786,7 @@ exit-code parameter containing the process exit code."
            (if callback
                (funcall callback exit-code))
            (if (equal exit-code 0)
-               (find-file dest-dir)
+               (my-repo-pins--open dest-dir)
              (error "Cannot clone %s" full-url))))
       (error "%s does not seem to be a valid git repository URL " full-url))))
 
@@ -864,7 +880,7 @@ available forge sources."
     (cond
      ((equal (car user-query) 'in-collection)
       (let ((selected-project-absolute-path (concat (my-repo-pins--safe-get-code-root) (cdr user-query))))
-        (find-file selected-project-absolute-path)))
+        (my-repo-pins--open selected-project-absolute-path)))
      ((equal (car user-query) 'user-provided)
       (my-repo-pins--clone-project (cdr user-query))))))
 
