@@ -1,9 +1,9 @@
 ;;; my-repo-pins-tests.el --- Project navigation and remote checkout -*- lexical-binding: t; -*-
 
-;;; Copyright (C) 2022 Félix Baylac Jacqué
+;;; Copyright (C) 2022-2023 Félix Baylac Jacqué
 ;;; Author: Félix Baylac Jacqué <felix at alternativebit.fr>
 ;;; Maintainer: Félix Baylac Jacqué <felix at alternativebit.fr>
-;;; Version: 1.14.0
+;;; Version: 0.4
 ;;; Packages-Requires: ((ert-async "0.1.2"))
 
 ;;; License:

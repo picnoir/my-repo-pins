@@ -1,9 +1,9 @@
 ;;; my-repo-pins.el --- Keep your git repositories organized -*- lexical-binding: t -*-
 
-;;; Copyright (C) 2022 Félix Baylac Jacqué
+;;; Copyright (C) 2022-2023 Félix Baylac Jacqué
 ;;; Author: Félix Baylac Jacqué <felix at alternativebit.fr>
 ;;; Maintainer: Félix Baylac Jacqué <felix at alternativebit.fr>
-;;; Version: 0.2
+;;; Version: 0.4
 ;;; Homepage: https://alternativebit.fr/projects/my-repo-pins/
 ;;; Package-Requires: ((emacs "26.1"))
 ;;; License:
