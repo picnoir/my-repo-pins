@@ -873,16 +873,20 @@ USER-QUERY was the original query for this state update."
 If the project is not in the ‘my-repo-pins-code-root’ yet, check it out from the
 available forge sources."
   (interactive)
-  (let ((user-query
+  (let* ((user-query
          (my-repo-pins--completing-read-or-custom
            "Jump to project: "
-           (my-repo-pins--get-code-root-projects (my-repo-pins--safe-get-code-root) my-repo-pins-max-depth))))
+           (my-repo-pins--get-code-root-projects (my-repo-pins--safe-get-code-root) my-repo-pins-max-depth)))
+         (query-local-path (concat (my-repo-pins--safe-get-code-root)
+                                   (my-repo-pins--filepath-from-clone-url (cdr user-query)))))
     (cond
      ((equal (car user-query) 'in-collection)
       (let ((selected-project-absolute-path (concat (my-repo-pins--safe-get-code-root) (cdr user-query))))
         (my-repo-pins--open selected-project-absolute-path)))
      ((equal (car user-query) 'user-provided)
-      (my-repo-pins--clone-project (cdr user-query))))))
+      (if (file-directory-p query-local-path)
+          (my-repo-pins--open query-local-path)
+        (my-repo-pins--clone-project (cdr user-query)))))))
 
 
 (provide 'my-repo-pins)
