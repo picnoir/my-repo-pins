@@ -163,6 +163,18 @@ Returns the git PROCESS object."
          :sentinel git-sentinel)
       (set-buffer current-buffer))))
 
+
+(defun my-repo-pins--is-clone-url-in-code-root (clone-url code-root)
+  "Check if CLONE-URL has been already cloned to the CODE-ROOT.
+
+Return t if that's the case, nil if it's not."
+  (let ((clone-filepath (my-repo-pins--filepath-from-clone-url clone-url)))
+    (and
+     (not (eq nil clone-filepath))
+     (file-directory-p
+      (concat code-root
+              (my-repo-pins--filepath-from-clone-url clone-url))))))
+
 (defun my-repo-pins--git-clone-in-dir (clone-url checkout-filepath &optional callback)
   "Clone the CLONE-URL repo at CHECKOUT-FILEPATH.
 
@@ -582,6 +594,20 @@ yet, returns an empty list."
   "Open the DIR directory using the ‘my-repo-pins-code-root’ function."
   (funcall my-repo-pins-open-function dir))
 
+
+(defun my-repo-pins--is-repo-query-cloned-in-code-root (repo-query)
+  "Check if REPO-QUERY has been already cloned to the code-root.
+
+Return t if that's the case, nil if it's not."
+  (let* ((parsed-repo-query (my-repo-pins--parse-repo-identifier repo-query))
+         (repo-query-kind (alist-get 'tag parsed-repo-query)))
+    ;; It's impossible to say whether or not a owner/repo or repo
+    ;; query has been already cloned without resolving it first.
+    (if (eq repo-query-kind 'full-url)
+        (file-directory-p (concat (my-repo-pins--safe-get-code-root)
+                                  (my-repo-pins--filepath-from-clone-url (cdr repo-query))))
+      nil)))
+
 ;;=============
 ;; Internal: UI
 ;;=============
@@ -741,34 +767,37 @@ url."
        (http-url (alist-get 'https forge-result-status))
        (code-root (my-repo-pins--safe-get-code-root))
        (dest-dir (concat code-root (my-repo-pins--filepath-from-clone-url http-url))))
-      (message "Cloning %s to %s" ssh-url dest-dir)
-      (cl-flet*
-          ((clone-http
-            ()
-            (my-repo-pins--git-clone-in-dir
-                  http-url
-                  dest-dir
-                  (lambda (exit-code)
-                    (if (not (equal exit-code 0))
-                         (error "Cannot clone %s nor %s" ssh-url http-url)
-                      (progn
-                        (message "Successfully cloned %s" dest-dir)
-                        (my-repo-pins--open dest-dir))))))
-           (clone-ssh
-            ()
-            (my-repo-pins--git-clone-in-dir
-                  ssh-url
-                  dest-dir
-                  (lambda (exit-code)
-                    (if (not (equal exit-code 0))
-                         (progn
-                           (message "Failed to clone %s" ssh-url)
-                           (message "Trying again with %s" http-url)
-                           (clone-http))
-                      (progn
-                        (message "Successfully cloned %s" dest-dir)
-                        (my-repo-pins--open dest-dir)))))))
-        (clone-ssh))))
+    (if (my-repo-pins--is-clone-url-in-code-root http-url code-root)
+        (my-repo-pins--open dest-dir)
+      (progn
+        (message "Cloning %s to %s" ssh-url dest-dir)
+        (cl-flet*
+            ((clone-http
+              ()
+              (my-repo-pins--git-clone-in-dir
+               http-url
+               dest-dir
+               (lambda (exit-code)
+                 (if (not (equal exit-code 0))
+                     (error "Cannot clone %s nor %s" ssh-url http-url)
+                   (progn
+                     (message "Successfully cloned %s" dest-dir)
+                     (my-repo-pins--open dest-dir))))))
+             (clone-ssh
+              ()
+              (my-repo-pins--git-clone-in-dir
+               ssh-url
+               dest-dir
+               (lambda (exit-code)
+                 (if (not (equal exit-code 0))
+                     (progn
+                       (message "Failed to clone %s" ssh-url)
+                       (message "Trying again with %s" http-url)
+                       (clone-http))
+                   (progn
+                     (message "Successfully cloned %s" dest-dir)
+                     (my-repo-pins--open dest-dir)))))))
+          (clone-ssh))))))
 
 (defun my-repo-pins--clone-from-full-url (full-url &optional callback)
   "Clone a repository from a fully-qualified FULL-URL git URL.
@@ -778,17 +807,18 @@ exit-code parameter containing the process exit code."
   (let*
       ((code-root (my-repo-pins--safe-get-code-root))
        (dest-dir (concat code-root (my-repo-pins--filepath-from-clone-url full-url))))
-    (if (not (file-directory-p dest-dir))
-        (my-repo-pins--git-clone-in-dir
-         full-url
-         dest-dir
-         (lambda (exit-code)
-           (if callback
-               (funcall callback exit-code))
-           (if (equal exit-code 0)
-               (my-repo-pins--open dest-dir)
-             (error "Cannot clone %s" full-url))))
-      (error "%s does not seem to be a valid git repository URL " full-url))))
+    ;; here
+    (if (my-repo-pins--is-clone-url-in-code-root full-url code-root)
+        (my-repo-pins--open dest-dir)
+      (my-repo-pins--git-clone-in-dir
+       full-url
+       dest-dir
+       (lambda (exit-code)
+         (if callback
+             (funcall callback exit-code))
+         (if (equal exit-code 0)
+             (my-repo-pins--open dest-dir)
+           (error "Cannot clone %s" full-url)))))))
 
 ;;=========================================
 ;; Internal: improving builtin autocomplete
@@ -876,17 +906,13 @@ available forge sources."
   (let* ((user-query
          (my-repo-pins--completing-read-or-custom
            "Jump to project: "
-           (my-repo-pins--get-code-root-projects (my-repo-pins--safe-get-code-root) my-repo-pins-max-depth)))
-         (query-local-path (concat (my-repo-pins--safe-get-code-root)
-                                   (my-repo-pins--filepath-from-clone-url (cdr user-query)))))
+           (my-repo-pins--get-code-root-projects (my-repo-pins--safe-get-code-root) my-repo-pins-max-depth))))
     (cond
      ((equal (car user-query) 'in-collection)
       (let ((selected-project-absolute-path (concat (my-repo-pins--safe-get-code-root) (cdr user-query))))
         (my-repo-pins--open selected-project-absolute-path)))
      ((equal (car user-query) 'user-provided)
-      (if (file-directory-p query-local-path)
-          (my-repo-pins--open query-local-path)
-        (my-repo-pins--clone-project (cdr user-query)))))))
+      (my-repo-pins--clone-project (cdr user-query))))))
 
 
 (provide 'my-repo-pins)

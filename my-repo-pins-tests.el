@@ -435,6 +435,21 @@ it'll get deleted before the end of the test."
   (should (equal (my-repo-pins--filepath-from-clone-url "git@github.com:NinjaTrappeur/my-repo-pins.el.git") "github.com/NinjaTrappeur/my-repo-pins.el"))
   (should (equal (my-repo-pins--filepath-from-clone-url "git@github.com:NinjaTrappeur/my-repo-pins.el") "github.com/NinjaTrappeur/my-repo-pins.el")))
 
+
+(ert-deftest my-repo-pins--test-is-repo-cloned-in-code-root ()
+  "Test the is-repo-cloned-in-code-root function."
+  (my-repo-pins--tests-run-on-testroot-1
+   (lambda (code-root)
+     (progn
+       (should (equal t (my-repo-pins--is-clone-url-in-code-root "ssh://git@example1.tld:user1/proj1.git" code-root)))
+       (should (equal t (my-repo-pins--is-clone-url-in-code-root "https://example1.tld/user1/proj1.git" code-root)))
+       (should (equal t (my-repo-pins--is-clone-url-in-code-root "git@example1.tld:user1/proj1.git" code-root)))
+       (should (equal nil (my-repo-pins--is-clone-url-in-code-root "git@example1.tld:user1/proj9.git" code-root)))
+       (should (equal nil (my-repo-pins--is-clone-url-in-code-root "ssh://git@invalid-url.tld:user1/proj1.git" code-root)))
+       (should (equal nil (my-repo-pins--is-clone-url-in-code-root "https://invalid-url.tld/user1/proj1.git" code-root)))
+       (should (equal nil (my-repo-pins--is-clone-url-in-code-root "https://invalid-url.tld/user1/proj1.git" code-root)))
+       (should (equal nil (my-repo-pins--is-clone-url-in-code-root "git@invalid-url.tld:user1/proj1.git" code-root)))))))
+
 ;;; State Management tests
 
 (ert-deftest my-repo-pins--test-init-forges-state ()
