@@ -3,7 +3,7 @@
 ;;; Copyright (C) 2022-2023 Félix Baylac Jacqué
 ;;; Author: Félix Baylac Jacqué <felix at alternativebit.fr>
 ;;; Maintainer: Félix Baylac Jacqué <felix at alternativebit.fr>
-;;; Version: 0.4
+;;; Version: 0.5
 ;;; Packages-Requires: ((ert-async "0.1.2"))
 
 ;;; License:

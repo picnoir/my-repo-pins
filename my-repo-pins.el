@@ -3,7 +3,7 @@
 ;;; Copyright (C) 2022-2023 Félix Baylac Jacqué
 ;;; Author: Félix Baylac Jacqué <felix at alternativebit.fr>
 ;;; Maintainer: Félix Baylac Jacqué <felix at alternativebit.fr>
-;;; Version: 0.4
+;;; Version: 0.5
 ;;; Homepage: https://alternativebit.fr/projects/my-repo-pins/
 ;;; Package-Requires: ((emacs "26.1"))
 ;;; License:
@@ -594,20 +594,6 @@ yet, returns an empty list."
   "Open the DIR directory using the ‘my-repo-pins-code-root’ function."
   (funcall my-repo-pins-open-function dir))
 
-
-(defun my-repo-pins--is-repo-query-cloned-in-code-root (repo-query)
-  "Check if REPO-QUERY has been already cloned to the code-root.
-
-Return t if that's the case, nil if it's not."
-  (let* ((parsed-repo-query (my-repo-pins--parse-repo-identifier repo-query))
-         (repo-query-kind (alist-get 'tag parsed-repo-query)))
-    ;; It's impossible to say whether or not a owner/repo or repo
-    ;; query has been already cloned without resolving it first.
-    (if (eq repo-query-kind 'full-url)
-        (file-directory-p (concat (my-repo-pins--safe-get-code-root)
-                                  (my-repo-pins--filepath-from-clone-url (cdr repo-query))))
-      nil)))
-
 ;;=============
 ;; Internal: UI
 ;;=============
@@ -807,7 +793,6 @@ exit-code parameter containing the process exit code."
   (let*
       ((code-root (my-repo-pins--safe-get-code-root))
        (dest-dir (concat code-root (my-repo-pins--filepath-from-clone-url full-url))))
-    ;; here
     (if (my-repo-pins--is-clone-url-in-code-root full-url code-root)
         (my-repo-pins--open dest-dir)
       (my-repo-pins--git-clone-in-dir
